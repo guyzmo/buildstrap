@@ -1,0 +1,7 @@
+var/
+__pycache__
+*.pyc
+.eggs
+*.egg-info
+bin/
+.installed.cfg
