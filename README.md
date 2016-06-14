@@ -1,6 +1,8 @@
 ## Buildstrap: generate a buildout config for any \*env project
 
 ![WTFPL](http://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-2.png)
+![Python3](https://img.shields.io/pypi/pyversions/buildstrap.svg)
+![Issues](https://img.shields.io/github/issues/guyzmo/buildstrap.svg)
 
 There's pyenv, pyvenv, venv, virtualenv… and who knows how many other ways to
 deal with development of python programs in a per-project self-contained
@@ -18,12 +20,21 @@ to make it easy to create a buildout environment within the project.
 
 [buildout]:https://github.com/buildout/buildout/
 
+## Quickstart Guide
+
+Here we'll see the most common usages, and refer to [the full documentation for
+more details][doc].
+
+[doc]:https://buildstrap.readthedocs.org/
+
 ### Usage
 
 when you got a repository that has requirements files, at the root of your project's
 directory, call buildstrap using:
 
-    % buildstrap run project requirements.txt
+```
+% buildstrap run project requirements.txt
+```
 
 where `project` as second argument is the name of the package as you've set it
 up in your `setup.py` — and as you'd import it from other python code.  
@@ -35,63 +46,75 @@ newly created `bin` directory of your project.
 If you have several `requirements.txt` files, depending on the task you want to
 do, it's easy:
 
-    % buildstrap run project project=requirements.txt test=requirements-test.txt doc=requirements-doc.txt
+```
+% buildstrap run project project=requirements.txt test=requirements-test.txt doc=requirements-doc.txt
+```
 
 which will create three sections in your `buildout.cfg` file, and get all the
 appropriate dependencies.
 
 Here's a real life example:
 
-    % git hub clone kennethreitz/requests
-    % cd requests
-    % buildstrap run requests requirements.txt
-    …
-    % bin/py.test
-    … (look at the tests result)
-    % bin/python3
-    >>> import requests
-    >>>
+```
+% git hub clone kennethreitz/requests
+% cd requests
+% buildstrap run requests requirements.txt
+…
+% bin/py.test
+… (look at the tests result)
+% bin/python3
+>>> import requests
+>>>
+```
 
 or another one:
 
-    % git hub clone jkbrzt/httpie
-    % cd httpie
-    % buildstrap run httpie requirements-dev.txt
-    …
-    % bin/py.test
-    … (look at the tests result)
-    % bin/http --version
-    1.0.0-dev
+```
+% git hub clone jkbrzt/httpie
+% cd httpie
+% buildstrap run httpie requirements-dev.txt
+…
+% bin/py.test
+… (look at the tests result)
+% bin/http --version
+1.0.0-dev
+```
 
 ### Installation
 
 it's as easy as any other python program:
 
-    % pip install buildstrap
+```
+% pip install buildstrap
+```
 
 or from the sources:
 
-    % git hub clone guyzmo/buildstrap
-    % cd buildstrap
-    % python3 setup.py install
+```
+% git hub clone guyzmo/buildstrap
+% cd buildstrap
+% python3 setup.py install
+```
 
 ### Development
 
 for development you just need to do:
 
-    % pip install buildstrap
-    % git hub clone guyzmo/buildstrap
-    % cd buildstrap
-    % builstrap run buildstrap requirements.txt
-    …
-    % bin/buildstrap
+```
+% pip install buildstrap
+% git hub clone guyzmo/buildstrap
+% cd buildstrap
+% builstrap run buildstrap requirements.txt
+…
+% bin/buildstrap
+```
 
 Yeah, I'm being evil here 😈
 
 ### Todo list
 
 * [ ] Tests: write a full test suite to make sure it's not buggy!
-* [ ] Pydoc: write a nice one page documentation beyond this README.
+* [o] Pydoc: write a nice one page documentation beyond this README.
 
 ### Nota Bene
 
