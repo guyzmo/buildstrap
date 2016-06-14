@@ -1,5 +1,4 @@
-Buildout configuration
-======================
+# Buildout configuration
 
 Before going into more details, let's have briefly a look at a `buildout.cfg`
 configuration. Each section of the configuration file are called `part`s in

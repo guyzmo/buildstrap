@@ -1,4 +1,4 @@
-## Buildstrap: generate a buildout config for any \*env project
+# Buildstrap: generate a buildout config for any \*env project
 
 ![WTFPL](http://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-2.png)
 ![Python3](https://img.shields.io/pypi/pyversions/buildstrap.svg)
@@ -20,14 +20,14 @@ to make it easy to create a buildout environment within the project.
 
 [buildout]:https://github.com/buildout/buildout/
 
-## Quickstart Guide
+# Quickstart Guide
 
 Here we'll see the most common usages, and refer to [the full documentation for
 more details][doc].
 
 [doc]:https://buildstrap.readthedocs.org/
 
-### Usage
+## Usage
 
 when you got a repository that has requirements files, at the root of your project's
 directory, call buildstrap using:
@@ -80,7 +80,7 @@ or another one:
 1.0.0-dev
 ```
 
-### Installation
+## Installation
 
 it's as easy as any other python program:
 
@@ -96,7 +96,7 @@ or from the sources:
 % python3 setup.py install
 ```
 
-### Development
+## Development
 
 for development you just need to do:
 
@@ -111,19 +111,23 @@ for development you just need to do:
 
 Yeah, I'm being evil here 😈
 
-### Todo list
+You can have a look at the [sources documentation][srcdoc].
+
+[srcdoc]:http://buildstrap.readthedocs.io/en/latest/buildstrap.html
+
+## Todo list
 
 * [ ] Tests: write a full test suite to make sure it's not buggy!
 * [o] Pydoc: write a nice one page documentation beyond this README.
 
-### Nota Bene
+## Nota Bene
 
 You might wonder where does the `git hub clone` command comes from, and I'm
 using here another project I wrote: [guyzmo/git-repo](https://github.com/guyzmo/git-repo).
 
 Simply put, `git hub clone user/project` is equivalent to `git clone https://github.com/user/project`.
 
-### License
+## License
 
     Copyright © 2016 Bernard `Guyzmo` Pratz <guyzmo+buildstrap+pub@m0g.net>
     This work is free. You can redistribute it and/or modify it under the

@@ -3,30 +3,34 @@
 '''
 Buildstrap: generate and run buildout in your projects
 
-Usage: {} [-v...] [run|show] [options] <package> <requirements> [<target>=<requirements>...]
+::
 
-Options:
-    run                         run buildout once buildout.cfg has been generated
-    show                        show the buildout.cfg (same as using `-o -`)
-    <package>                   use this name for the package being developed
-    <requirements>              use this requirements file as main requirements
-    <target>=<requirements>     create a target with given requirements
-    -i,--interpreter <python>   use this python version
-    -o,--output <buildout.cfg>  file to output [default: buildout.cfg]
-    -r,--root <path>            path to the project root (where buildout.cfg will
-                                be generated) (defaults to ./)
-    -s,--src <path>             path to the sources (default is same as root path)
-                                relative to the root path if not absolute
-    -e,--env <path>             path to the environment data [default: var]
-                                relative to directory if not absolute
-    -b,--bin <path>             path to the bin directory [default: bin]
-                                relative to directory if not absolute
-    -f,--force                  force overwrite output file if it exists
-    -v,--verbose                increase verbosity
-    -h,--help                   show this message
-    --version                   show version
+    Usage: {} [-v...] [run|show] [options] <package> <requirements> [<target>=<requirements>...]
+
+    Options:
+        run                         run buildout once buildout.cfg has been generated
+        show                        show the buildout.cfg (same as using `-o -`)
+        <package>                   use this name for the package being developed
+        <requirements>              use this requirements file as main requirements
+        <target>=<requirements>     create a target with given requirements
+        -i,--interpreter <python>   use this python version
+        -o,--output <buildout.cfg>  file to output [default: buildout.cfg]
+        -r,--root <path>            path to the project root (where buildout.cfg will
+                                    be generated) (defaults to ./)
+        -s,--src <path>             path to the sources (default is same as root path)
+                                    relative to the root path if not absolute
+        -e,--env <path>             path to the environment data [default: var]
+                                    relative to directory if not absolute
+        -b,--bin <path>             path to the bin directory [default: bin]
+                                    relative to directory if not absolute
+        -f,--force                  force overwrite output file if it exists
+        -v,--verbose                increase verbosity
+        -h,--help                   show this message
+        --version                   show version
 
 For more detailed help, please read the documentation:
+
+::
 
     man buildstrap
 
@@ -55,7 +59,7 @@ class ListBuildout(list):
     parser.
 
     The standard configparser doesn't anything about lists, and outputs
-    python's internal representation of strings: `['a', 'b', 'c']` as values.
+    python's internal representation of strings: ``['a', 'b', 'c']`` as values.
     And the standard configparser consider multiline values as a multiline
     string.
 
@@ -64,7 +68,7 @@ class ListBuildout(list):
 
     This class uses a context manager to define the behaviour of the string conversion
     method. The default behaviour is the same as the standard list. But when within
-    the context of the `generate_context` method, it prints lists as multiline string,
+    the context of the ``generate_context`` method, it prints lists as multiline string,
     one value per line, the way buildout expects it.
     '''
     _generating_state = False
@@ -91,8 +95,10 @@ class ListBuildout(list):
 def build_part_pip(target, requirements):
     '''Generates the dict representation of the part that will parse the requirements
 
-    This will output a part that uses the `collective.recipe.pip` recipe to
+    This will output a part that uses the ``collective.recipe.pip`` recipe to
     parse the requirements as expose it as the eggs attribute of the part.
+
+    ::
 
         [<target>-pip]
         recipe=collective.recipe.pip
@@ -100,9 +106,13 @@ def build_part_pip(target, requirements):
 
     Multiple requirements can be used, separated by commas.
 
-    :param target: name of the part's role
-    :param requirements: list of file names of the requirements to parse
-    :returns: dict representation of the part
+    Args:
+        target: name of the part's role
+        requirements: list of file names of the requirements to parse
+
+    Returns:
+        dict representation of the part
+
     '''
     return {
         '{}-pip'.format(target): OrderedDict(
@@ -115,8 +125,8 @@ def build_part_target(target, packages=list(), interpreter=None):
     '''Generates a part that will export requirements as eggs
 
     This will output a part that export the eggs parsed by the 'pip' part using the
-    `zc.recipe.egg` recipe, to populate the environment. The generated part follows
-    the following template:
+    ``zc.recipe.egg`` recipe, to populate the environment. The generated part follows
+    the following template::
 
         [<target>]
         recipe=zc.recipe.egg
@@ -124,15 +134,18 @@ def build_part_target(target, packages=list(), interpreter=None):
              <packages>
         interpreter=<interpreter>
 
-    If no `packages` argument is given, the list only contains the reference to
+    If no ``packages`` argument is given, the list only contains the reference to
     the requirements egg list, otherwise the list of packages gets appended.
     If no interpreter argument is given, the directive is ignored.
 
-    :param target: name to be used for the part
-    :param interpreter: if given, setup the interpreter directive, using the name
-        of a python interpreter as a string.
-    :param packages: if given, adds that package to the list of requirements.
-    :return: dict representation of the part
+    Args:
+        target: name to be used for the part
+        interpreter: if given, setup the interpreter directive, using the name
+           of a python interpreter as a string.
+        packages: if given, adds that package to the list of requirements.
+
+    Returns:
+        dict representation of the part
     '''
     eggs = [ '${{{}-pip:eggs}}'.format(target) ]
     eggs += packages
@@ -156,7 +169,7 @@ def build_part_buildout(root_path='.', src_path=None, env_path=None, bin_path=No
     general values for the environment. Here we setup paths and defaults for
     buildout's behaviour. Please refer to buildout documentation for more.
 
-    This will output a buildout header that can be considered as a good start:
+    This will output a buildout header that can be considered as a good start::
 
         [buildout]
         newest=false
@@ -167,27 +180,30 @@ def build_part_buildout(root_path='.', src_path=None, env_path=None, bin_path=No
         develop-eggs-directory=${buildout:directory}/var/develop-eggs
         parts-directory=${buildout:directory}/var/parts
 
-    Parameter `root_path` will change the path to the project's root, which is where
-    the enviroment will be based on. If you're placing the `buildout.cfg` file in another
+    Parameter ``root_path`` will change the path to the project's root, which is where
+    the enviroment will be based on. If you're placing the ``buildout.cfg`` file in another
     directory than the root of the project, set it to the path that can get you from
     the buildout.cfg into the project, and it will all work ok.
 
-    Parameter `src_path` will change the path to the sources, so if you've got your
-    sources in `src`, you can set it up to src and it will generate:
+    Parameter ``src_path`` will change the path to the sources, so if you've got your
+    sources in ``./src``, you can set it up to src and it will generate::
 
-        develop=src
+        develop=./src
 
-    Beware that all non-absolute paths given to `src_path` are relative to the
-    `root_path`.
+    Beware that all non-absolute paths given to ``src_path`` are relative to the
+    ``root_path``.
 
-    For parameter `bin_path` and `env_path`, it will respectively change path to the
-    generated `bin` directory and `env` directory, after running buildout.
+    For parameter ``bin_path`` and ``env_path``, it will respectively change path to the
+    generated ``bin`` directory and ``env`` directory, after running buildout.
 
-    :param root_path: path string to the root of the project (from which all other paths are relative to)
-    :param src_path: path string to the sources (where `setup.py` is)
-    :param env_path: path string to the environment (where dependencies are downloaded)
-    :param bin_path: path string to the runnable scripts
-    :return: the buildout part as a dict
+    Args:
+        root_path: path string to the root of the project (from which all other paths are relative to)
+        src_path: path string to the sources (where ``setup.py`` is)
+        env_path: path string to the environment (where dependencies are downloaded)
+        bin_path: path string to the runnable scripts
+
+    Returns:
+        the buildout part as a dict
     '''
     buildout = OrderedDict()
     buildout['newest'] = 'false'
@@ -219,11 +235,11 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
     parts, each one being a section in the configuration file. For more, please
     refer to buildout's documentation.
 
-    First, it generates the `[buildout]` part within the dict representation.
+    First, it generates the ``[buildout]`` part within the dict representation.
 
-    Then it generates the parts that will follow the `zc.recipe.egg` to build
+    Then it generates the parts that will follow the ``zc.recipe.egg`` to build
     the environment once buildout is called. Those will refer to what we call
-    the `pip` parts that are parsing requirements files and exposing the
+    the ``pip`` parts that are parsing requirements files and exposing the
     dependencies to be used.
 
     The first two arguments are defining the minimal possible configuration,
@@ -231,9 +247,9 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
     would not mean much for the buildout configuration, thus the requirement of
     those two parameters.
 
-    So the first part to be generated is the one defined by `packages` and
-    `requirements` parameters. If both contain a single element (`marvin` and
-    `requirements.txt`), it will output that part as the dict equivalent of:
+    So the first part to be generated is the one defined by ``packages`` and
+    ``requirements`` parameters. If both contain a single element (``marvin`` and
+    ``requirements.txt``), it will output that part as the dict equivalent of::
 
         [marvin-pip]
         recipe=collective.recipe.pip
@@ -248,10 +264,10 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
     requirements files, so if you give packages and requirements being
     respectively:
 
-     * `dent,prefect,beeblebrox` and
-     * `requirements.txt,requirements-dev.txt`
+     * ``dent,prefect,beeblebrox`` and
+     * ``requirements.txt,requirements-dev.txt``
 
-    it will generate:
+    it will generate::
 
         [dent-pip]
         recipe=collective.recipe.pip
@@ -265,12 +281,12 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
              prefect
              beeblebrox
 
-    Then you have the `extra_requirements` that are following the following format:
-    `<part_name>=<requirements>`. The `<part_name>` side here will be excusively used as a
-    name for the part (so they can be anything), and the `<requirements>` side is a comma
+    Then you have the ``extra_requirements`` that are following the following format:
+    ``<part_name>=<requirements>``. The ``<part_name>`` side here will be excusively used as a
+    name for the part (so they can be anything), and the ``<requirements>`` side is a comma
     separated list of requirements files.
 
-    So for example, you could have `test=requirements-test.txt` that would result in:
+    So for example, you could have ``test=requirements-test.txt`` that would result in::
 
         [test-pip]
         recipe=collective.recipe.pip
@@ -282,9 +298,9 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
 
     And if you specify more, like with:
 
-    * `['test=requirements.txt,requirements-test.txt', 'doc=requirements-doc.txt']`
+    * ``['test=requirements.txt,requirements-test.txt', 'doc=requirements-doc.txt']``
 
-    it will generate:
+    it will generate::
 
         [test-pip]
         recipe=collective.recipe.pip
@@ -304,24 +320,27 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
         eggs=${doc-eggs}
 
     Finally, as each part is being generated, it's also added to the list of parts
-    to be ran by buildout, so for the last example, the `parts` attribute of the
-    `buildout` dict will be like:
+    to be ran by buildout, so for the last example, the ``parts`` attribute of the
+    ``buildout`` dict will be like::
 
         [buildout]
         …
         parts=test
               doc
 
-    :param packages: the list of packages to target as first part (list or comma separated string)
-    :param requirements: the list of requirements to target as first part (list or comma separated string)
-    :param extra_requirements: the list of other parts, formated as `part_name=requirements`
-        where requirements is a comma separated list of requirements.
-    :param interpreter: string name of the python interpreter to use
-    :param root_path: path string to the root of the project (from which all other paths are relative to)
-    :param src_path: path string to the sources (where `setup.py` is)
-    :param env_path: path string to the environment (where dependencies are downloaded)
-    :param bin_path: path string to the runnable scripts
-    :returns: dict instance configured with all parts.
+    Args:
+        packages: the list of packages to target as first part (list or comma separated string)
+        requirements: the list of requirements to target as first part (list or comma separated string)
+        extra_requirements: the list of other parts, formated as ``part_name=requirements``
+         where requirements is a comma separated list of requirements.
+        interpreter: string name of the python interpreter to use
+        root_path: path string to the root of the project (from which all other paths are relative to)
+        src_path: path string to the sources (where ``setup.py`` is)
+        env_path: path string to the environment (where dependencies are downloaded)
+        bin_path: path string to the runnable scripts
+
+    Returns:
+        dict instance configured with all parts.
     '''
     pips = OrderedDict()
     parts = OrderedDict()
@@ -364,12 +383,16 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
 def generate_buildout_config(parts, output, force=False):
     '''Generates the buildout configuration
 
-    Using the custom `ListBuildout` context, lists will be printed as multilines.
-    If output is set to `-` it will print to stdout the file.
+    Using the custom ``ListBuildout`` context, lists will be printed as multilines.
+    If output is set to ``-`` it will print to stdout the file.
 
-    :param parts: dict based representation of the buildout file to generate
-    :param output: name of the file to output
-    :param force: if set, it won't care whether the file exists
+    Args:
+        parts: dict based representation of the buildout file to generate
+        output: name of the file to output
+        force: if set, it won't care whether the file exists
+
+    Raises:
+        FileExistsError: when a file already exists.
     '''
     with ListBuildout.generate_context():
         parser = ConfigParser()
@@ -390,8 +413,11 @@ def buildstrap(args):
 
     refer to the __doc__ of this module for all arguments.
 
-    :param args: arguments to parse
-    :returns: 0 on success, 1 otherwise
+    Args:
+        args: arguments to parse
+
+    Returns:
+        0 on success, 1 otherwise
     '''
     try:
         if args['--verbose'] >= 2:
@@ -426,9 +452,11 @@ def buildstrap(args):
 
 
 def run(): # pragma: no cover
+    '''Parses arguments, gets current command name and version number'''
     sys.exit(buildstrap(docopt(__doc__.format(os.path.basename(sys.argv[0])),
         version='Buildstrap v{}'.format(__version__))))
 
 
 if __name__ == "__main__": # pragma: no cover
+    '''well there's always a good place to start'''
     run()

@@ -1,4 +1,4 @@
-## Buildstrap: self contained env with ♥
+# Buildstrap: self contained env with ♥
 
 For those who want to hack on any project without having to hack around your
 shell environment, mess with your python tools, pollute your home dotfiles,

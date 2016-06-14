@@ -1,5 +1,4 @@
-Usage
-=====
+# Usage
 
 ```
 Usage: buildstrap [-v...] [run|show] [options] <package> <requirements> [<target>=<requirements>...]
@@ -26,8 +25,7 @@ Options:
     --version                   show version
 ```
 
-Multiple requirements.txt
--------------------------
+# Multiple requirements.txt
 
 Many projects offer multiple `requirements.txt` files, one for each task of
 the development cycle (which usually are running, testing, documenting).
@@ -85,8 +83,7 @@ buildout    cm2html   cm2man        cm2xetex  py.test      sphinx-apidoc   sphin
 buildstrap  cm2latex  cm2pseudoxml  cm2xml    py.test-2.7  sphinx-autogen  sphinx-quickstart
 ```
 
-Multiple packages
------------------
+# Multiple packages
 
 Some projects will include several packages in the sources, so to support that, just list
 all your packages as a comma seperated list, and they will all be included:
@@ -223,8 +220,7 @@ recipe = collective.recipe.pip
 
 N.B.: the show command is equivalent to `--output -`.
 
-Configure the path
-------------------
+# Configure the path
 
 For your project, there are three important path to configure:
 
@@ -247,7 +243,7 @@ But sometimes, you want to change the configuration, for the best (or the worst
 So, you can set all those paths to values other than the default, and have it
 all in a very different setup than the default.
 
-### Root path: `--root`
+## Root path: `--root`
 
 The project's root is where typically all other paths are being relative to.
 It's where you'll expect to find the `buildout.cfg` file, and where the
@@ -277,7 +273,7 @@ configs = ${buildout:develop}/requirements.txt
 recipe = collective.recipe.pip
 ```
 
-### Sources path: `--src`
+## Sources path: `--src`
 
 Though, if you change the root directory, chances are (like in the former example) that
 it won't be where your sources are. Then, running `buildout` will end up in throwing an
@@ -326,7 +322,7 @@ Generated script '/tmp/buildstrap-build/bin/buildout'.
 Generated script '/tmp/buildstrap-build/bin/buildstrap'.
 ```
 
-### Environment path: `--env`
+## Environment path: `--env`
 
 As seen in the previous example, the script is generating a bunch of directories used
 for setting up the environment in `{root_path}/var/`. You might want them to be named
@@ -360,7 +356,7 @@ parts-directory = /tmp/buildstrap-var/parts
 …
 ```
 
-### Bin path: `--bin`
+## Bin path: `--bin`
 
 Finally, you might not like the default of having the `bin` directory at the
 `root` path position, so you can put it within var the following way:
