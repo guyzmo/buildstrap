@@ -3,6 +3,7 @@
 ![WTFPL](http://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-2.png)
 ![Python3](https://img.shields.io/pypi/pyversions/buildstrap.svg)
 ![Issues](https://img.shields.io/github/issues/guyzmo/buildstrap.svg)
+![Build](https://travis-ci.org/guyzmo/buildstrap.svg)
 
 There's pyenv, pyvenv, venv, virtualenv… and who knows how many other ways to
 deal with development of python programs in a per-project self-contained
