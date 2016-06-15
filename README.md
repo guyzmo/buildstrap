@@ -107,7 +107,7 @@ for development you just need to do:
 % pip install buildstrap
 % git hub clone guyzmo/buildstrap
 % cd buildstrap
-% builstrap run buildstrap requirements.txt
+% builstrap run buildstrap requirements.txt test=requirement-test.txt doc=requirement-doc.txt
 …
 % bin/buildstrap
 ```
