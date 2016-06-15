@@ -7,5 +7,10 @@ addons:
   apt:
     packages:
         - pandoc
+# command to install dependencies
+install: "pip install codeclimate-test-reporter"
 # command to run tests
 script: "python setup.py test"
+addons:
+      code_climate:
+                repo_token: f2d3e4012404e1ea57ce15e392308d55b891a5ba8edd136c9e0072131d52e161

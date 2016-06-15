@@ -4,6 +4,8 @@
 ![Python3](https://img.shields.io/pypi/pyversions/buildstrap.svg)
 ![Issues](https://img.shields.io/github/issues/guyzmo/buildstrap.svg)
 ![Build](https://travis-ci.org/guyzmo/buildstrap.svg)
+![Code Climate](https://codeclimate.com/github/guyzmo/buildstrap/badges/gpa.svg)
+![Coverage](https://codeclimate.com/github/guyzmo/buildstrap/badges/coverage.svg)
 
 There's pyenv, pyvenv, venv, virtualenv… and who knows how many other ways to
 deal with development of python programs in a per-project self-contained
