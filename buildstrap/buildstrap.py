@@ -5,11 +5,13 @@ Buildstrap: generate and run buildout in your projects
 
 ::
 
-    Usage: {} [-v...] [run|show] [options] <package> <requirements> [<target>=<requirements>...]
+    Usage: {} [-v...] [run|show|debug|generate] [options] <package> <requirements> [<target>=<requirements>...]
 
     Options:
         run                         run buildout once buildout.cfg has been generated
         show                        show the buildout.cfg (same as using `-o -`)
+        debug                       print internal representation of buildout config
+        generate                    create the buildout.cfg file (default action)
         <package>                   use this name for the package being developed
         <requirements>              use this requirements file as main requirements
         <target>=<requirements>     create a target with given requirements
@@ -114,11 +116,15 @@ def build_part_pip(target, requirements):
         dict representation of the part
 
     '''
+    if not target:
+        raise ValueError('Target argument must be given')
+    if len(requirements) == 0:
+        raise ValueError('Requirements list shall have at least one element')
     return {
-        '{}-pip'.format(target): OrderedDict(
-            recipe  = 'collective.recipe.pip',
-            configs = ListBuildout(['${{buildout:develop}}/{}'.format(r) for r in requirements])
-        )
+        '{}-pip'.format(target): OrderedDict([
+            ('recipe'  , 'collective.recipe.pip'),
+            ('configs' , ListBuildout(['${{buildout:develop}}/{}'.format(r) for r in requirements]))
+        ])
     }
 
 def build_part_target(target, packages=list(), interpreter=None):
@@ -144,17 +150,23 @@ def build_part_target(target, packages=list(), interpreter=None):
            of a python interpreter as a string.
         packages: if given, adds that package to the list of requirements.
 
+    Raises:
+        TypeError: if the packages is not a list of string
+
     Returns:
         dict representation of the part
     '''
     eggs = [ '${{{}-pip:eggs}}'.format(target) ]
+    if not isinstance(packages, list):
+        raise TypeError('packages argument should be a list!')
+
     eggs += packages
 
     part = {
-        target: OrderedDict(
-            recipe = 'zc.recipe.egg',
-            eggs   = ListBuildout(eggs)
-        )
+        target: OrderedDict([
+            ('recipe' , 'zc.recipe.egg'),
+            ('eggs'   , ListBuildout(eggs)),
+        ])
     }
 
     if interpreter:
@@ -162,7 +174,7 @@ def build_part_target(target, packages=list(), interpreter=None):
 
     return part
 
-def build_part_buildout(root_path='.', src_path=None, env_path=None, bin_path=None):
+def build_part_buildout(root_path=None, src_path=None, env_path=None, bin_path=None):
     '''Generates the buildout part
 
     This part is the entry point of a buildout configuration file, setting up
@@ -211,11 +223,11 @@ def build_part_buildout(root_path='.', src_path=None, env_path=None, bin_path=No
     if root_path:
         buildout['directory'] = root_path
     if not env_path:
-        env_path = os.path.join('${buildout:directory}', 'var')
+        env_path = 'var'
     if not os.path.isabs(env_path):
             env_path = os.path.join('${buildout:directory}', env_path)
     if not bin_path:
-        bin_path = os.path.join('${buildout:directory}', 'bin')
+        bin_path = 'bin'
     if not os.path.isabs(bin_path):
         bin_path = os.path.join('${buildout:directory}', bin_path)
     buildout['develop'] = src_path if src_path else '.'
@@ -349,7 +361,7 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
     if not isinstance(packages, list):
         packages = packages.split(',')
 
-    if not isinstance(packages, list):
+    if not isinstance(requirements, list):
         requirements = requirements.split(',')
 
     if len(packages) == 0:
@@ -366,7 +378,7 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
     parts.update(build_part_target(first_part_name, packages, interpreter))
     targets.append(first_part_name)
     # build main package requirements
-    pips.update(build_part_pip(first_part_name, requirements.split(',')))
+    pips.update(build_part_pip(first_part_name, requirements))
 
     for arg in extra_requirements:
         target, requirements = arg.split('=')
@@ -432,6 +444,10 @@ def buildstrap(args):
                 args['--src'],
                 args['--env'],
                 args['--bin'])
+
+        if args['debug']:
+            pprint(parts)
+            return 0
 
         if args['show']:
             args['--output'] = '-'
