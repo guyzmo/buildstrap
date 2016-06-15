@@ -115,11 +115,6 @@ You can have a look at the [sources documentation][srcdoc].
 
 [srcdoc]:http://buildstrap.readthedocs.io/en/latest/buildstrap.html
 
-## Todo list
-
-* [ ] Tests: write a full test suite to make sure it's not buggy!
-* [x] Pydoc: write a nice one page documentation beyond this README.
-
 ## Nota Bene
 
 You might wonder where does the `git hub clone` command comes from, and I'm

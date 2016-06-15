@@ -432,7 +432,7 @@ def buildstrap(args):
         0 on success, 1 otherwise
     '''
     try:
-        if args['--verbose'] >= 2:
+        if args['--verbose'] >= 2: # pragma: no cover
             print(args, file=sys.stderr)
 
         parts = build_parts(
@@ -458,7 +458,7 @@ def buildstrap(args):
             buildout(['-c', args['--output']])
 
         return 0
-    except Exception as err:
+    except Exception as err: # pragma: no cover
         print('Fatal error: {}'.format(err), file=sys.stderr)
         if args['--verbose']:
             print('-----------------------------------', file=sys.stderr)

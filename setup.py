@@ -8,6 +8,28 @@ if sys.version_info.major < 3:
 
 from distutils.core import Command
 from distutils.core import setup
+from setuptools.command.test import test as TestCommand
+
+class PyTest(TestCommand):
+    user_options = [('pytest-args=', 'a', "Arguments to pass into py.test")]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = []
+
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        import pytest
+
+        if len(self.pytest_args) == 0:
+            self.pytest_args = ['--cov=buildstrap', '--cov-report=term-missing']
+        errno = pytest.main(self.pytest_args)
+        sys.exit(errno)
+
 
 class dist_clean(Command):
     description = 'Clean the repository from all buildout stuff'
@@ -42,8 +64,8 @@ setup(name='buildstrap',
       description='Tool for managing remote repositories from your git CLI!',
       classifiers=[
           # 'Development Status :: 2 - Pre-Alpha',
-          'Development Status :: 3 - Alpha',
-          # 'Development Status :: 4 - Beta',
+          # 'Development Status :: 3 - Alpha',
+          'Development Status :: 4 - Beta',
           # 'Development Status :: 5 - Production/Stable',
           # 'Development Status :: 6 - Mature',
           # 'Development Status :: 7 - Inactive',
@@ -71,7 +93,6 @@ setup(name='buildstrap',
             'docopt',
             'zc.buildout',
       ],
-      cmdclass={'dist_clean': dist_clean},
       entry_points="""
       # -*- Entry points: -*-
       [console_scripts]
@@ -79,7 +100,10 @@ setup(name='buildstrap',
       """,
       license='WTFPL',
       packages=find_packages(exclude=['tests']),
-      test_suite='pytest',
+      cmdclass={
+          'test': PyTest,
+          'dist_clean': dist_clean
+      },
       tests_require=[
           'pytest',
           'pytest-cov',
