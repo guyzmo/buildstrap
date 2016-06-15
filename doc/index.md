@@ -55,3 +55,12 @@ Yes, it's as easy as it sounds!
 
 [buildout]:https://github.com/buildout/buildout
 
+```eval_rst
+
+.. toctree::
+   quickstart
+   buildout
+   advanced_usage
+   buildstrap
+
+```

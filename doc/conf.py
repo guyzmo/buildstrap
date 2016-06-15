@@ -37,9 +37,7 @@ def setup(app):
             }, True)
     app.add_transform(AutoStructify)
 
-parsers = {
-    '.md': CommonMarkParser
-    }
+source_parsers = { '.md': CommonMarkParser }
 
 # -- General configuration ------------------------------------------------
 
@@ -64,8 +62,8 @@ templates_path = ['_templates']
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-source_suffix = ['.rst', '.md']
 # source_suffix = '.rst'
+source_suffix = [ '.md', '.rst' ]
 
 # The encoding of source files.
 #

@@ -118,7 +118,7 @@ You can have a look at the [sources documentation][srcdoc].
 ## Todo list
 
 * [ ] Tests: write a full test suite to make sure it's not buggy!
-* [o] Pydoc: write a nice one page documentation beyond this README.
+* [x] Pydoc: write a nice one page documentation beyond this README.
 
 ## Nota Bene
 
