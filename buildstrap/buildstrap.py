@@ -415,7 +415,10 @@ def generate_buildout_config(parts, output, force=False):
             return
 
         if not force and os.path.exists(output):
-            raise FileExistsError('Cannot overwrite {}: file already exists! Use --force if necessary.'.format(output))
+            raise FileExistsError('\n'.join([
+                    'Cannot overwrite {}: file already exists! Use --force if necessary.'.format(output),
+                    'As a buildout configuration exists, you might want to run buildout directly!'
+                    ]))
 
         with open(output, 'w') as out:
             parser.write(out)
