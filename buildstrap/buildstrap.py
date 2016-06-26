@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
 '''
-Buildstrap: generate and run buildout in your projects
+Buildstrap: generate and run buildout in your projects ::
 
-::
-
-    Usage: {} [-v...] [run|show|debug|generate] [options] <package> <requirements> [<target>=<requirements>...]
+    Usage: {} [-v...] [options] [run|show|debug|generate] [-p part...]<package> <requirements>...
 
     Options:
         run                         run buildout once buildout.cfg has been generated
@@ -14,7 +12,7 @@ Buildstrap: generate and run buildout in your projects
         generate                    create the buildout.cfg file (default action)
         <package>                   use this name for the package being developed
         <requirements>              use this requirements file as main requirements
-        <target>=<requirements>     create a target with given requirements
+        -p,--part <part>            choose part template to use (use "list" to show all)
         -i,--interpreter <python>   use this python version
         -o,--output <buildout.cfg>  file to output [default: buildout.cfg]
         -r,--root <path>            path to the project root (where buildout.cfg will
@@ -26,17 +24,14 @@ Buildstrap: generate and run buildout in your projects
         -b,--bin <path>             path to the bin directory [default: bin]
                                     relative to directory if not absolute
         -f,--force                  force overwrite output file if it exists
+        -c,--config <path>          path to the configuration directory
+                                    [default: ~/.config/buildstrap]
         -v,--verbose                increase verbosity
         -h,--help                   show this message
         --version                   show version
 
-For more detailed help, please read the documentation:
-
-::
-
-    man buildstrap
-
-or on https://readthedocs.org/buildstrap
+For more detailed help, please read the documentation
+on https://readthedocs.org/buildstrap
 '''
 
 import os, sys
@@ -47,6 +42,7 @@ from configparser import ConfigParser
 from pprint import pprint
 from docopt import docopt
 
+from zc.buildout.configparser import parse
 from zc.buildout.buildout import main as buildout
 
 import pkg_resources
@@ -94,50 +90,16 @@ class ListBuildout(list):
         else:
             return super(ListBuildout, self).__str__()
 
-def build_part_pip(target, requirements):
-    '''Generates the dict representation of the part that will parse the requirements
-
-    This will output a part that uses the ``collective.recipe.pip`` recipe to
-    parse the requirements as expose it as the eggs attribute of the part.
-
-    ::
-
-        [<target>-pip]
-        recipe=collective.recipe.pip
-        configs=<requirements>
-
-    Multiple requirements can be used, separated by commas.
-
-    Args:
-        target: name of the part's role
-        requirements: list of file names of the requirements to parse
-
-    Returns:
-        dict representation of the part
-
-    '''
-    if not target:
-        raise ValueError('Target argument must be given')
-    if len(requirements) == 0:
-        raise ValueError('Requirements list shall have at least one element')
-    return {
-        '{}-pip'.format(target): OrderedDict([
-            ('recipe'  , 'collective.recipe.pip'),
-            ('configs' , ListBuildout(['${{buildout:develop}}/{}'.format(r) for r in requirements]))
-        ])
-    }
-
 def build_part_target(target, packages=list(), interpreter=None):
-    '''Generates a part that will export requirements as eggs
+    '''Generates a part to run the currenctly develop package
 
-    This will output a part that export the eggs parsed by the 'pip' part using the
-    ``zc.recipe.egg`` recipe, to populate the environment. The generated part follows
-    the following template::
+    This will output a part, that will make a script based on the current package
+    developed, using the ``zc.recipe.egg`` recipe, to populate the environment.
+    The generated part follows the following template::
 
         [<target>]
         recipe=zc.recipe.egg
-        eggs=${<target>-pip:eggs}
-             <packages>
+        eggs=<package>
         interpreter=<interpreter>
 
     If no ``packages`` argument is given, the list only contains the reference to
@@ -156,10 +118,10 @@ def build_part_target(target, packages=list(), interpreter=None):
     Returns:
         dict representation of the part
     '''
-    eggs = [ '${{{}-pip:eggs}}'.format(target) ]
     if not isinstance(packages, list):
         raise TypeError('packages argument should be a list!')
 
+    eggs = [ '${buildout:requirements-eggs}' ]
     eggs += packages
 
     part = {
@@ -174,6 +136,81 @@ def build_part_target(target, packages=list(), interpreter=None):
 
     return part
 
+
+def list_part_templates(config_path):
+    '''Iterates over the available part templates
+
+    Will get through both package's templates path and user config path to
+    check for ``.part.cfg`` files.
+
+    Args:
+        config_path: path to the user's part template directory
+
+    Returns:
+        iterator over the list of templates
+
+    '''
+    user_config_path = os.path.join(os.path.expanduser(config_path))
+    pkg_config_path = os.path.join(os.path.dirname(__file__), 'templates')
+
+    templates = []
+    if os.path.exists(pkg_config_path):
+        templates += os.listdir(os.path.join(pkg_config_path))
+        print('Using parts from {}'.format(pkg_config_path), file=sys.stderr)
+    if os.path.exists(user_config_path):
+        templates += os.listdir(user_config_path)
+        print('Using parts from {}'.format(user_config_path), file=sys.stderr)
+
+    for fname in templates:
+        if 'list' in fname:
+            print('Warning: a part template named list.cfg exists, and cannot be called. Please change its name!', file=sys.stderr)
+        if '.part.cfg' in fname:
+            yield fname.replace('.part.cfg', '')
+        else:
+            print('Warning: file named {} does not end with .part.cfg and is ignored!'.format(fname), file=sys.stderr)
+
+def build_part_template(name, config_path):
+    '''Creates a part out of a template file
+
+    Will resolve a part file based on its name, by looking through both package's
+    static directory, and through user defined configuration path.
+
+    The template file will feature a section (which name is the same as the file name)
+    and will be parsed, and then added to the buildout file *as is*. It will also be
+    named with the ``.part.cfg`` extension.
+
+    Args:
+        name: name of the template file (without extension)
+        config_path: directory where to look for the template file
+
+    Returns:
+        dict representation of a part
+
+    Raises:
+        FileNotFoundError if no template can be found.
+    '''
+    template_name = '{}.part.cfg'.format(name)
+    template_path = os.path.join(os.path.expanduser(config_path))
+
+    try:
+        template_file = open(template_path, 'r')
+    except FileNotFoundError:
+        try:
+            template_path = os.path.join(os.path.dirname(__file__), 'templates', template_name)
+            template_file = open(template_path, 'r')
+        except FileNotFoundError:
+            template_file = None
+
+    if not template_file:
+        raise FileNotFoundError('Missing template file {}.part.cfg in {}'.format(name, config_path))
+
+    res = parse(open(template_path, 'r'), name)
+    # make items order predictible
+    for k,v in res.items():
+        if isinstance(v, dict):
+            res[k] = OrderedDict(sorted(v.items(), key=lambda t: t[0]))
+    return res
+
 def build_part_buildout(root_path=None, src_path=None, env_path=None, bin_path=None):
     '''Generates the buildout part
 
@@ -186,11 +223,15 @@ def build_part_buildout(root_path=None, src_path=None, env_path=None, bin_path=N
         [buildout]
         newest=false
         parts=
+        package=
+        extensions=gp.vcsdevelopc
         directory=.
         develop=${buildout:directory}
         eggs-directory=${buildout:directory}/var/eggs
         develop-eggs-directory=${buildout:directory}/var/develop-eggs
+        develop-dir=${buildout:directory}/var/develop
         parts-directory=${buildout:directory}/var/parts
+        requirements=
 
     Parameter ``root_path`` will change the path to the project's root, which is where
     the enviroment will be based on. If you're placing the ``buildout.cfg`` file in another
@@ -220,6 +261,8 @@ def build_part_buildout(root_path=None, src_path=None, env_path=None, bin_path=N
     buildout = OrderedDict()
     buildout['newest'] = 'false'
     buildout['parts'] = ''
+    buildout['package'] = ''
+    buildout['extensions'] = 'gp.vcsdevelop'
     if root_path:
         buildout['directory'] = root_path
     if not env_path:
@@ -234,11 +277,14 @@ def build_part_buildout(root_path=None, src_path=None, env_path=None, bin_path=N
     buildout['eggs-directory'] = os.path.join(env_path, 'eggs')
     buildout['develop-eggs-directory'] = os.path.join(env_path, 'develop-eggs')
     buildout['parts-directory'] = os.path.join(env_path, 'parts')
+    buildout['develop-dir'] = os.path.join(env_path, 'develop')
     buildout['bin-directory'] = bin_path
+    buildout['requirements'] = ListBuildout([])
     return {'buildout': buildout}
 
-def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
-        root_path='.', src_path=None, env_path=None, bin_path=None):
+
+def build_parts(packages, requirements, part_templates=[], interpreter=None, 
+        config_path=None, root_path='.', src_path=None, env_path=None, bin_path=None):
     '''Builds up the different parts of the buildout configuration
 
     this is the workhorse of this code. It will build and return an internal
@@ -248,113 +294,73 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
     refer to buildout's documentation.
 
     First, it generates the ``[buildout]`` part within the dict representation.
+    Within it, it will setup the ``packages`` value so we keep track of which
+    packages you want to build, the ``requirements`` value will be used to find
+    and download all the eggs that are needed as dependencies. the ``parts`` list
+    will keep track of each generated part, only one part being generated for the
+    code under development (even if there are several packages).
 
-    Then it generates the parts that will follow the ``zc.recipe.egg`` to build
-    the environment once buildout is called. Those will refer to what we call
-    the ``pip`` parts that are parsing requirements files and exposing the
-    dependencies to be used.
+    The first argument will define the first part's name (the one that will be
+    used to generate a script if an entry point has been defined within the ``setup.py``).
+    Thus, it will append the package name to the list of packages within the ``[buildout]``
+    section, and be added to the list of eggs that will be run::
 
-    The first two arguments are defining the minimal possible configuration,
-    which is a single part (matching a single requirements file). Not having it
-    would not mean much for the buildout configuration, thus the requirement of
-    those two parameters.
-
-    So the first part to be generated is the one defined by ``packages`` and
-    ``requirements`` parameters. If both contain a single element (``marvin`` and
-    ``requirements.txt``), it will output that part as the dict equivalent of::
-
-        [marvin-pip]
-        recipe=collective.recipe.pip
-        configs=requirements.txt
+        [buildout]
+        package = marvin
+        parts = marvin
+        …
+        
 
         [marvin]
-        recipe=zc.recipe.egg
-        eggs=${marvin-eggs}
-             package_name
+        recipe = zc.recipe.egg
+        eggs = ${buildout:requirements-eggs}
+             marvin
 
-    But both can be comma separated list (as a *string*) of package names and
-    requirements files, so if you give packages and requirements being
-    respectively:
+    The second argument is the list of requirements to be parsed and fed to ``gp.vcsdevelop``
+    so it can work out downloading all your dependencies::
+
+        [buildout]
+        requirements = requirements.txt
+        …
+
+    Both can be lists (or comma separated list — as a *string*) of package names and
+    requirements files, so if you give packages and requirements being respectively:
 
      * ``dent,prefect,beeblebrox`` and
      * ``requirements.txt,requirements-dev.txt``
 
     it will generate::
 
-        [dent-pip]
-        recipe=collective.recipe.pip
-        configs=requirements.txt
-                requirements-dev.txt
-
-        [dent]
-        recipe=zc.recipe.egg
-        eggs=${foobar-eggs}
-             dent
-             prefect
-             beeblebrox
-
-    Then you have the ``extra_requirements`` that are following the following format:
-    ``<part_name>=<requirements>``. The ``<part_name>`` side here will be excusively used as a
-    name for the part (so they can be anything), and the ``<requirements>`` side is a comma
-    separated list of requirements files.
-
-    So for example, you could have ``test=requirements-test.txt`` that would result in::
-
-        [test-pip]
-        recipe=collective.recipe.pip
-        configs=requirements-test.txt
-
-        [test]
-        recipe=zc.recipe.egg
-        eggs=${test-eggs}
-
-    And if you specify more, like with:
-
-    * ``['test=requirements.txt,requirements-test.txt', 'doc=requirements-doc.txt']``
-
-    it will generate::
-
-        [test-pip]
-        recipe=collective.recipe.pip
-        configs=requirements.txt,
-                requirements-test.txt
-
-        [test]
-        recipe=zc.recipe.egg
-        eggs=${test-eggs}
-
-        [doc-pip]
-        recipe=collective.recipe.pip
-        configs=requirements-test.txt
-
-        [doc]
-        recipe=zc.recipe.egg
-        eggs=${doc-eggs}
-
-    Finally, as each part is being generated, it's also added to the list of parts
-    to be ran by buildout, so for the last example, the ``parts`` attribute of the
-    ``buildout`` dict will be like::
-
         [buildout]
         …
-        parts=test
-              doc
+        parts = marvin
+        package = marvin prefect beeblebrox
+        requirements = requirements.txt
+                requirements-dev.txt
+
+        [marvin]
+        recipe = zc.recipe.egg
+        eggs = ${buildout:requirements-eggs}
+             marvin
+
+    The third argument enables to load a part template. It will load the part from
+    the static path within the package, or from ``config_path``, which defaults to
+    the user's home config directory.
 
     Args:
         packages: the list of packages to target as first part (list or comma separated string)
         requirements: the list of requirements to target as first part (list or comma separated string)
-        extra_requirements: the list of other parts, formated as ``part_name=requirements``
-         where requirements is a comma separated list of requirements.
+        part_templates: list of templates to load
         interpreter: string name of the python interpreter to use
+        config_path: path string to the configuration directory where to find the template parts files.
         root_path: path string to the root of the project (from which all other paths are relative to)
         src_path: path string to the sources (where ``setup.py`` is)
         env_path: path string to the environment (where dependencies are downloaded)
         bin_path: path string to the runnable scripts
 
     Returns:
-        dict instance configured with all parts.
+        OrderedDict instance configured with all parts.
     '''
-    pips = OrderedDict()
     parts = OrderedDict()
     targets = []
 
@@ -377,18 +383,17 @@ def build_parts(packages, requirements, extra_requirements=[], interpreter=None,
     # build main package part
     parts.update(build_part_target(first_part_name, packages, interpreter))
     targets.append(first_part_name)
-    # build main package requirements
-    pips.update(build_part_pip(first_part_name, requirements))
 
-    for arg in extra_requirements:
-        target, requirements = arg.split('=')
-        targets.append(target)
-        # add parts
-        pips.update(build_part_pip(target, requirements.split(',')))
-        parts.update(build_part_target(target, interpreter=interpreter))
+    parts.update(build_part_target(first_part_name, packages, interpreter))
 
+    for template_name in part_templates or []:
+        parts[template_name] = build_part_template(template_name, config_path)[template_name]
+        targets.append(template_name)
+
+    for r in requirements:
+        parts['buildout']['requirements'] += ListBuildout([os.path.join('${buildout:develop}', r)])
     parts['buildout']['parts'] = ListBuildout(targets)
-    parts.update(pips)
+    parts['buildout']['package'] = ' '.join(packages)
 
     return parts
 
@@ -441,8 +446,9 @@ def buildstrap(args):
         parts = build_parts(
                 args['<package>'],
                 args['<requirements>'],
-                args['<target>=<requirements>'],
+                args['--part'],
                 args['--interpreter'],
+                args['--config'],
                 args['--root'],
                 args['--src'],
                 args['--env'],

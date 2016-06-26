@@ -8,7 +8,7 @@ baked by buildstrap, you'll only see two:
 
 * `zc.recipe.egg`: which takes care of downloading and installing dependencies into
     the self-contained environment ;
-* `collective.recipe.pip`: which parses a `requirements.txt` file and exposes the
+* `gp.vcsdevelop`: which parses a `requirements.txt` file and exposes the
     dependencies, so `zc.recipe.egg` can do its job (in the context of buildstrap).
 
 Then, to setup the environment, there's a section named `[buildout]` that
@@ -20,8 +20,8 @@ Once the buildout configuration file, `buildout.cfg` has been generated, you can
 it as much as you like to suit your needs. Buildout is much more than just setting up
 a self contained environment!
 
-If you want to read more about buildout, [check its documentation][doc], or just 
-[about `buildout.cfg`][doc-conf].
+If you want to read more about buildout, [check its documentation][doc], or for more
+in depth info, [check `buildout.cfg` manual][doc-conf].
 
 [recipes]:http://www.buildout.org/en/latest/docs/recipelist.html
 [doc]:http://www.buildout.org/en/latest/docs/

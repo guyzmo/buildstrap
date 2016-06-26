@@ -1,11 +1,11 @@
 # Buildstrap: generate a buildout config for any \*env project
 
-![WTFPL](http://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-2.png)
-![Python3](https://img.shields.io/pypi/pyversions/buildstrap.svg)
-![Issues](https://img.shields.io/github/issues/guyzmo/buildstrap.svg)
-![Build](https://travis-ci.org/guyzmo/buildstrap.svg)
-![Code Climate](https://codeclimate.com/github/guyzmo/buildstrap/badges/gpa.svg)
-![Coverage](https://codeclimate.com/github/guyzmo/buildstrap/badges/coverage.svg)
+[![WTFPL](http://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-2.png)](http://wtfpl.org)
+[![Python3](https://img.shields.io/pypi/pyversions/buildstrap.svg)](https://pypi.python.org/pypi/buildstrap)
+[![Issues](https://img.shields.io/github/issues/guyzmo/buildstrap.svg)](https://github.com/guyzmo/buildstrap)
+[![Build](https://travis-ci.org/guyzmo/buildstrap.svg)](https://travis-ci.org/guyzmo/buildstrap)
+[![Code Climate](https://codeclimate.com/github/guyzmo/buildstrap/badges/gpa.svg)](https://codeclimate.com/github/guyzmo/buildstrap)
+[![Coverage](https://codeclimate.com/github/guyzmo/buildstrap/badges/coverage.svg)](https://codeclimate.com/github/guyzmo/buildstrap)
 
 There's pyenv, pyvenv, venv, virtualenv… and who knows how many other ways to
 deal with development of python programs in a per-project self-contained
@@ -50,7 +50,7 @@ If you have several `requirements.txt` files, depending on the task you want to
 do, it's easy:
 
 ```
-% buildstrap run project project=requirements.txt test=requirements-test.txt doc=requirements-doc.txt
+% buildstrap run project -p pytest -p sphinx requirements.txt requirements-test.txt requirements-doc.txt
 ```
 
 which will create three sections in your `buildout.cfg` file, and get all the
@@ -59,7 +59,7 @@ appropriate dependencies.
 Here's a real life example:
 
 ```
-% git hub clone kennethreitz/requests
+% git hub clone kennethreitz/requests    # cf 'Nota Bene'
 % cd requests
 % buildstrap run requests requirements.txt
 …
@@ -73,7 +73,7 @@ Here's a real life example:
 or another one:
 
 ```
-% git hub clone jkbrzt/httpie
+% git hub clone jkbrzt/httpie            # cf 'Nota Bene'
 % cd httpie
 % buildstrap run httpie requirements-dev.txt
 …
@@ -105,9 +105,9 @@ for development you just need to do:
 
 ```
 % pip install buildstrap
-% git hub clone guyzmo/buildstrap
+% git clone https://github.com/guyzmo/buildstrap
 % cd buildstrap
-% builstrap run buildstrap requirements.txt test=requirement-test.txt doc=requirement-doc.txt
+% builstrap run buildstrap -p pytest -p sphinx requirements.txt requirement-test.txt requirement-doc.txt
 …
 % bin/buildstrap
 ```

@@ -1,25 +1,29 @@
 # Usage
 
 ```
-Usage: buildstrap [-v...] [run|show] [options] <package> <requirements> [<target>=<requirements>...]
+Usage: buildstrap [-v...] [options] [run|show|debug|generate] [-p part...]<package> <requirements>...
 
 Options:
     run                         run buildout once buildout.cfg has been generated
     show                        show the buildout.cfg (same as using `-o -`)
+    debug                       print internal representation of buildout config
+    generate                    create the buildout.cfg file (default action)
     <package>                   use this name for the package being developed
     <requirements>              use this requirements file as main requirements
-    <target>=<requirements>     create a target with given requirements
+    -p,--part <part>            choose part template to use (use "list" to show all)
     -i,--interpreter <python>   use this python version
     -o,--output <buildout.cfg>  file to output [default: buildout.cfg]
-    -r,--root <path>            path to the project root (where buildout.cfg will 
-                                be generated) (defaults to ./)
+    -r,--root <path>            path to the project root (where buildout.cfg will
+				be generated) (defaults to ./)
     -s,--src <path>             path to the sources (default is same as root path)
-                                relative to the root path if not absolute
+				relative to the root path if not absolute
     -e,--env <path>             path to the environment data [default: var]
-                                relative to directory if not absolute
+				relative to directory if not absolute
     -b,--bin <path>             path to the bin directory [default: bin]
-                                relative to directory if not absolute
+				relative to directory if not absolute
     -f,--force                  force overwrite output file if it exists
+    -c,--config <path>          path to the configuration directory
+				[default: ~/.config/buildstrap]
     -v,--verbose                increase verbosity
     -h,--help                   show this message
     --version                   show version
@@ -33,7 +37,7 @@ the development cycle (which usually are running, testing, documenting).
 Well, just tell buildstrap what the extra requirements are:
 
 ```
-% buildstrap run buildstrap requirements.txt doc=requirements-doc.txt test=requirements-test.txt
+% buildstrap run buildstrap -p pytest -p sphinx requirements.txt requirements-doc.txt requirements-test.txt
 ```
 
 and that will generate the following buildout.cfg configuration:
@@ -42,45 +46,45 @@ and that will generate the following buildout.cfg configuration:
 [buildout]
 newest = false
 parts = buildstrap
-		doc
-		test
+        pytest
+        sphinx
+package = buildstrap
+extensions = gp.vcsdevelop
 develop = .
 eggs-directory = ${buildout:directory}/var/eggs
 develop-eggs-directory = ${buildout:directory}/var/develop-eggs
 parts-directory = ${buildout:directory}/var/parts
+develop-dir = ${buildout:directory}/var/develop
+bin-directory = ${buildout:directory}/bin
+requirements = ${buildout:develop}/requirements.txt
+        ${buildout:develop}/requirements-doc.txt
+        ${buildout:develop}/requirements-test.txt
 
 [buildstrap]
 recipe = zc.recipe.egg
-eggs = ${buildstrap-pip:eggs}
-		buildstrap
+eggs = ${buildout:requirements-eggs}
+        buildstrap
 
-[doc]
+[pytest]
+arguments = ['--cov={}/{}'.format('${buildout:develop}', package) for package in '${buildout:pack
+age}'.split(',')] \
+        +['--cov-report', 'term-missing', 'tests']+sys.argv[1:]
+eggs = ${buildout:requirements-eggs}
 recipe = zc.recipe.egg
-eggs = ${doc-pip:eggs}
 
-[test]
-recipe = zc.recipe.egg
-eggs = ${test-pip:eggs}
-
-[buildstrap-pip]
-configs = ${buildout:develop}/requirements.txt
-recipe = collective.recipe.pip
-
-[doc-pip]
-configs = ${buildout:directory}/requirement-doc.txt
-recipe = collective.recipe.pip
-
-[test-pip]
-configs = ${buildout:directory}/requirement-test.txt
-recipe = collective.recipe.pip
+[sphinx]
+eggs = ${buildout:requirements-eggs}
+source = ${buildout:directory}/doc
+recipe = collective.recipe.sphinxbuilder
+build = ${buildout:directory}/doc/_build
 ```
 
 and you'll find all the tools you'll need in bin:
 
 ```
 % ls bin
-buildout    cm2html   cm2man        cm2xetex  py.test      sphinx-apidoc   sphinx-build
-buildstrap  cm2latex  cm2pseudoxml  cm2xml    py.test-2.7  sphinx-autogen  sphinx-quickstart
+buildout    cm2html   cm2man        cm2xetex  py.test      sphinx         sphinx-autogen  sphinx-quickstart
+buildstrap  cm2latex  cm2pseudoxml  cm2xml    py.test-2.7  sphinx-apidoc  sphinx-build
 ```
 
 # Multiple packages
@@ -89,59 +93,26 @@ Some projects will include several packages in the sources, so to support that, 
 all your packages as a comma seperated list, and they will all be included:
 
 ```
-% buildstrap run dent,prefect,beeblebox requirements.txt
-
+% buildstrap show dent,prefect,beeblebox requirements.txt
 [buildout]
 newest = false
 parts = dent
+package = dent prefect beeblebox
+extensions = gp.vcsdevelop
 develop = .
 eggs-directory = ${buildout:directory}/var/eggs
 develop-eggs-directory = ${buildout:directory}/var/develop-eggs
 parts-directory = ${buildout:directory}/var/parts
+develop-dir = ${buildout:directory}/var/develop
+bin-directory = ${buildout:directory}/bin
+requirements = ${buildout:develop}/requirements.txt
 
 [dent]
 recipe = zc.recipe.egg
-eggs = ${dent-pip:eggs}
-		dent
-		prefect
-		beeblebox
-
-[dent-pip]
-recipe = collective.recipe.pip
-configs = ${buildout:develop}/requirements.txt
-```
-
-Multiple requirements files
----------------------------
-
-Some other projects will use several requirements file for a single task (because for
-whatever crazy reason, they don't want to use the `-r other_requirements.txt` syntax).
-Well just list all the requirements as a comma separated list:
-
-```
-% buildstrap run mostly_harmless requirements.txt,other_requirements.txt
-```
-
-Which will generate the matching environment, with the following buildout.cfg:
-
-```
-[buildout]
-newest = false
-parts = mosty_harmless
-develop = .
-eggs-directory = ${buildout:directory}/var/eggs
-develop-eggs-directory = ${buildout:directory}/var/develop-eggs
-parts-directory = ${buildout:directory}/var/parts
-
-[mosty_harmless]
-eggs = ${mosty_harmless-pip:eggs}
-		mosty_harmless
-recipe = zc.recipe.egg
-
-[mosty_harmless-pip]
-recipe = collective.recipe.pip
-configs = ${buildout:develop}/requirements.txt
-          ${buildout:directory}/other_requirements.txt
+eggs = ${buildout:requirements-eggs}
+        dent
+        prefect
+        beeblebox
 ```
 
 Control the output
@@ -156,19 +127,21 @@ no subcommand, and you'll get it in your current directory!
 [buildout]
 newest = false
 parts = slartibartfast
+package = slartibartfast
+extensions = gp.vcsdevelop
 develop = .
 eggs-directory = ${buildout:directory}/var/eggs
 develop-eggs-directory = ${buildout:directory}/var/develop-eggs
 parts-directory = ${buildout:directory}/var/parts
+develop-dir = ${buildout:directory}/var/develop
+bin-directory = ${buildout:directory}/bin
+requirements = ${buildout:develop}/requirements.txt
 
 [slartibartfast]
-eggs = ${slartibartfast-pip:eggs}
-       slartibartfast
 recipe = zc.recipe.egg
+eggs = ${buildout:requirements-eggs}
+        slartibartfast
 
-[slartibartfast-pip]
-configs = ${buildout:develop}/requirements.txt
-recipe = collective.recipe.pip
 ```
 
 but if you want to just test the command and print the configuration to stdout,
@@ -179,19 +152,21 @@ without it doing nothing, use the `show` subcommand:
 [buildout]
 newest = false
 parts = slartibartfast
+package = slartibartfast
+extensions = gp.vcsdevelop
 develop = .
 eggs-directory = ${buildout:directory}/var/eggs
 develop-eggs-directory = ${buildout:directory}/var/develop-eggs
 parts-directory = ${buildout:directory}/var/parts
+develop-dir = ${buildout:directory}/var/develop
+bin-directory = ${buildout:directory}/bin
+requirements = ${buildout:develop}/requirements.txt
 
 [slartibartfast]
-eggs = ${slartibartfast-pip:eggs}
-       slartibartfast
 recipe = zc.recipe.egg
+eggs = ${buildout:requirements-eggs}
+        slartibartfast
 
-[slartibartfast-pip]
-configs = ${buildout:develop}/requirements.txt
-recipe = collective.recipe.pip
 ```
 
 and if you want to write the `buildout.cfg` as another file, you can either redirect
@@ -203,19 +178,21 @@ the show command with a pipe, or use the `--output` argument:
 [buildout]
 newest = false
 parts = slartibartfast
+package = slartibartfast
+extensions = gp.vcsdevelop
 develop = .
 eggs-directory = ${buildout:directory}/var/eggs
 develop-eggs-directory = ${buildout:directory}/var/develop-eggs
 parts-directory = ${buildout:directory}/var/parts
+develop-dir = ${buildout:directory}/var/develop
+bin-directory = ${buildout:directory}/bin
+requirements = ${buildout:develop}/requirements.txt
 
 [slartibartfast]
-eggs = ${slartibartfast-pip:eggs}
-       slartibartfast
 recipe = zc.recipe.egg
+eggs = ${buildout:requirements-eggs}
+        slartibartfast
 
-[slartibartfast-pip]
-configs = ${buildout:develop}/requirements.txt
-recipe = collective.recipe.pip
 ```
 
 N.B.: the show command is equivalent to `--output -`.
@@ -237,7 +214,7 @@ is:
 * `env_path` → `{root_path}/var` → './var'
 * `bin_path` → `{root_path}/bin` → './bin'
 
-But sometimes, you want to change the configuration, for the best (or the worst
+But sometimes, you want to change the defaults, for the best (or the worst
 — most often, the worst, though).
 
 So, you can set all those paths to values other than the default, and have it
@@ -257,20 +234,21 @@ file, otherwise it's keeping the default.
 [buildout]
 newest = false
 parts = buildstrap
-develop = .
+package = buildstrap
+extensions = gp.vcsdevelop
 directory = /tmp/buildstrap-env/
+develop = .
 eggs-directory = ${buildout:directory}/var/eggs
 develop-eggs-directory = ${buildout:directory}/var/develop-eggs
 parts-directory = ${buildout:directory}/var/parts
+develop-dir = ${buildout:directory}/var/develop
+bin-directory = ${buildout:directory}/bin
+requirements = ${buildout:develop}/requirements.txt
 
 [buildstrap]
-eggs = ${buildstrap-pip:eggs}
-       buildstrap
 recipe = zc.recipe.egg
-
-[buildstrap-pip]
-configs = ${buildout:develop}/requirements.txt
-recipe = collective.recipe.pip
+eggs = ${buildout:requirements-eggs}
+        buildstrap
 ```
 
 ## Sources path: `--src`
@@ -286,16 +264,26 @@ So, if your `setup.py` is not at the root of your project, you definitely want t
 use the `--src` argument.
 
 ```
-% buildstrap -r /tmp -s `pwd`/buildstrap show buildstrap requirements.txt
+% buildstrap -r /tmp/buildstrap-build -s `pwd`/buildstrap show buildstrap requirements.txt
 [buildout]
 newest = false
 parts = buildstrap
-develop = .
-directory = /tmp/buildstrap-env/
+package = buildstrap
+extensions = gp.vcsdevelop
+directory = /tmp
+develop = /absolute/path/to/buildstrap
 eggs-directory = ${buildout:directory}/var/eggs
 develop-eggs-directory = ${buildout:directory}/var/develop-eggs
 parts-directory = ${buildout:directory}/var/parts
-…
+develop-dir = ${buildout:directory}/var/develop
+bin-directory = ${buildout:directory}/bin
+requirements = ${buildout:develop}/requirements.txt
+
+[buildstrap]
+recipe = zc.recipe.egg
+eggs = ${buildout:requirements-eggs}
+        buildstrap
+
 ```
 
 *Nota Bene*: if you do not want to use a path relative to the `root` path, then
@@ -307,16 +295,16 @@ So running this command with buildout will do:
 ```
 % buildout
 Creating directory '/tmp/buildstrap-build/var/eggs'.
+Getting distribution for 'gp.vcsdevelop'.
+warning: no previously-included files matching '*' found under directory 'docs/_build'
+Got gp.vcsdevelop 2.2.3.
 Creating directory '/tmp/buildstrap-build/bin'.
 Creating directory '/tmp/buildstrap-build/var/parts'.
 Creating directory '/tmp/buildstrap-build/var/develop-eggs'.
-Develop: '/path/to/sources/of/buildstrap'
-Getting distribution for 'collective.recipe.pip'.
-warning: no files found matching '*.rst' under directory 'collective'
-Got collective.recipe.pip 0.3.4.
+Develop: '/home/guyzmo/Workspace/Projects/buildstrap'
 Getting distribution for 'zc.recipe.egg>=2.0.0a3'.
 Got zc.recipe.egg 2.0.3.
-Installing buildstrap-pip.
+Unused options for buildout: 'package'.
 Installing buildstrap.
 Generated script '/tmp/buildstrap-build/bin/buildout'.
 Generated script '/tmp/buildstrap-build/bin/buildstrap'.
@@ -333,12 +321,22 @@ differently, so they're not seen in listings for example:
 [buildout]
 newest = false
 parts = buildstrap
-develop = .
-directory = /tmp/buildstrap-env/
+package = buildstrap
+extensions = gp.vcsdevelop
+directory = /tmp
+develop = /home/guyzmo/Workspace/Projects/buildstrap/buildstrap
 eggs-directory = ${buildout:directory}/.var/eggs
 develop-eggs-directory = ${buildout:directory}/.var/develop-eggs
 parts-directory = ${buildout:directory}/.var/parts
-…
+develop-dir = ${buildout:directory}/.var/develop
+bin-directory = ${buildout:directory}/bin
+requirements = ${buildout:develop}/requirements.txt
+
+[buildstrap]
+recipe = zc.recipe.egg
+eggs = ${buildout:requirements-eggs}
+        buildstrap
+
 ```
 
 or you might want to put it at any other place, by using an absolute path:
@@ -346,13 +344,13 @@ or you might want to put it at any other place, by using an absolute path:
 ```
 % buildstrap -r /tmp -s `pwd`/buildstrap -e /tmp/buildstrap-var show buildstrap requirements.txt
 [buildout]
-newest = false
-parts = buildstrap
-develop = .
-directory = /tmp/buildstrap-env/
+directory = /tmp
+develop = /home/guyzmo/Workspace/Projects/buildstrap/buildstrap
 eggs-directory = /tmp/buildstrap-var/eggs
 develop-eggs-directory = /tmp/buildstrap-var/develop-eggs
 parts-directory = /tmp/buildstrap-var/parts
+develop-dir = /tmp/buildstrap-var/develop
+bin-directory = ${buildout:directory}/bin
 …
 ```
 
@@ -364,12 +362,11 @@ Finally, you might not like the default of having the `bin` directory at the
 ```
 % buildstrap -b var/bin show buildstrap requirements.txt
 [buildout]
-newest = false
-parts = buildstrap
 develop = .
 eggs-directory = ${buildout:directory}/var/eggs
 develop-eggs-directory = ${buildout:directory}/var/develop-eggs
 parts-directory = ${buildout:directory}/var/parts
+develop-dir = ${buildout:directory}/var/develop
 bin-directory = ${buildout:directory}/var/bin
 …
 ```
@@ -379,13 +376,12 @@ or same as before, to somewhere other place non relative to the sources:
 ```
 % buildstrap -r /tmp -s `pwd`/buildstrap -e /tmp/buildstrap-var -b /tmp/buildstrap-bin show buildstrap requirements.txt
 [buildout]
-newest = false
-parts = buildstrap
 develop = .
 directory = /tmp/buildstrap-env/
 eggs-directory = /tmp/buildstrap-var/eggs
 develop-eggs-directory = /tmp/buildstrap-var/develop-eggs
 parts-directory = /tmp/buildstrap-var/parts
+develop-dir = /tmp/buildstrap-var/develop
 bin-directory = /tmp/buildstrap-bin
 …
 ```

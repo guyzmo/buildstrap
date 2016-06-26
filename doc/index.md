@@ -30,16 +30,14 @@ parts = buildstrap
 develop = .
 eggs-directory = ${buildout:directory}/var/eggs
 develop-eggs-directory = ${buildout:directory}/var/develop-eggs
+develop-dir = ${buildout:directory}/var/develop
 parts-directory = ${buildout:directory}/var/parts
+requirements = ${buildout:develop}/requirements.txt
 
 [buildstrap]
-eggs = ${buildstrap-pip:eggs}
-		buildstrap
+eggs = ${buildout:requirements-eggs}
+	buildstrap
 recipe = zc.recipe.egg
-
-[buildstrap-pip]
-configs = ${buildout:develop}/requirements.txt
-recipe = collective.recipe.pip
 ```
 
 That file is then used to configure buildout so it creates the environment

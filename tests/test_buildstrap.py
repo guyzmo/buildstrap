@@ -38,57 +38,21 @@ def test_list():
         assert str(lb_two) == '\n'.join(l_two)
         assert str(lb_thr) == '\n'.join(l_thr)
 
-class TestFun__build_part_pip:
-    def test_build_part_pip__nothing(self):
-        with pytest.raises(ValueError):
-            assert build_part_pip(None, []) == {
-                    'None-pip': OrderedDict([
-                            ('recipe', 'collective.recipe.pip'),
-                            ('configs', []),
-                        ])
-                    }
-
-    def test_build_part_pip__part_no_config(self):
-        with pytest.raises(ValueError):
-            assert build_part_pip('a', []) == {
-                    'a-pip': OrderedDict([
-                            ('recipe', 'collective.recipe.pip'),
-                            ('configs', []),
-                        ])
-                    }
-
-    def test_build_part_pip__ones(self):
-        assert build_part_pip('a', ['b']) == {
-                'a-pip': OrderedDict([
-                        ('recipe', 'collective.recipe.pip'),
-                        ('configs', ['${buildout:develop}/b']),
-                    ])
-                }
-
-    def test_build_part_pip__multiple_configs(self):
-        assert build_part_pip('a', ['b', 'c', 'd']) == {
-                'a-pip': OrderedDict([
-                        ('recipe', 'collective.recipe.pip'),
-                        ('configs', ['${buildout:develop}/b',
-                                    '${buildout:develop}/c',
-                                    '${buildout:develop}/d'])
-                    ])
-                }
 
 class TestFun__build_part_target:
     def test_build_part_target__target(self):
         assert build_part_target('a') == {
-                'a': OrderedDict([
-                        ('recipe', 'zc.recipe.egg'),
-                        ('eggs', ['${a-pip:eggs}'])
-                    ])
-                }
+            'a': OrderedDict([
+                    ('recipe', 'zc.recipe.egg'),
+                    ('eggs', ['${buildout:requirements-eggs}'])
+                ])
+            }
 
     def test_build_part_target__target_one_pkg(self):
         assert build_part_target('a', ['b']) == {
             'a': OrderedDict([
                     ('recipe', 'zc.recipe.egg'),
-                    ('eggs', ['${a-pip:eggs}', 'b']),
+                    ('eggs', ['${buildout:requirements-eggs}', 'b'])
                 ])
             }
 
@@ -96,7 +60,7 @@ class TestFun__build_part_target:
         assert build_part_target('a', ['b1', 'b2', 'b3', 'b4']) == {
             'a': OrderedDict([
                     ('recipe', 'zc.recipe.egg'),
-                    ('eggs', ['${a-pip:eggs}', 'b1', 'b2', 'b3', 'b4']),
+                    ('eggs', ['${buildout:requirements-eggs}', 'b1', 'b2', 'b3', 'b4']),
                 ])
             }
 
@@ -104,7 +68,7 @@ class TestFun__build_part_target:
         assert build_part_target('a', interpreter='c') == {
             'a': OrderedDict([
                     ('recipe', 'zc.recipe.egg'),
-                    ('eggs', ['${a-pip:eggs}']),
+                    ('eggs', ['${buildout:requirements-eggs}']),
                     ('interpreter', 'c')
                 ])
             }
@@ -113,7 +77,7 @@ class TestFun__build_part_target:
         assert build_part_target('a', ['b'], 'c') == {
             'a': OrderedDict([
                     ('recipe', 'zc.recipe.egg'),
-                    ('eggs', ['${a-pip:eggs}', 'b']),
+                    ('eggs', ['${buildout:requirements-eggs}', 'b']),
                     ('interpreter', 'c')
                 ])
             }
@@ -122,24 +86,61 @@ class TestFun__build_part_target:
         assert build_part_target('a', ['b1', 'b2', 'b3', 'b4'], 'c') == {
             'a': OrderedDict([
                     ('recipe', 'zc.recipe.egg'),
-                    ('eggs', ['${a-pip:eggs}', 'b1', 'b2', 'b3', 'b4']),
+                    ('eggs', ['${buildout:requirements-eggs}', 'b1', 'b2', 'b3', 'b4']),
                     ('interpreter', 'c')
                 ])
             }
 
 ##
 
+class TestFun__build_part_template:
+    def test_exists(self):
+        assert build_part_template('pytest', '') == {
+                'pytest': OrderedDict([
+                    ('arguments', "['--cov={}/{}'.format('${buildout:develop}', "
+                                 'package) for package in '
+                                 "'${buildout:package}'.split(',')] \\\n"
+                                 "+['--cov-report', 'term-missing', "
+                                 "'tests']+sys.argv[1:]"),
+                    ('eggs', '${buildout:requirements-eggs}'),
+                    ('recipe', 'zc.recipe.egg'),
+                ])
+            }
+        assert build_part_template('sphinx', '') == {
+                'sphinx': OrderedDict([
+                    ('build', '${buildout:directory}/doc/_build'),
+                    ('eggs', '${buildout:requirements-eggs}'),
+                    ('recipe', 'collective.recipe.sphinxbuilder'),
+                    ('source', '${buildout:directory}/doc'),
+                ])
+            }
+
+    def test_doesnotexists(self):
+        with pytest.raises(FileNotFoundError):
+            build_part_template('doesnotexists', '')
+
+##
+
+class TestFun__list_part_template:
+    def test_list(self):
+        assert list(list_part_templates('')) == ['pytest', 'sphinx']
+
+##
+
 class TestFun__build_part_buildout:
     def test_build_part_buildout__default_ordering(self):
         assert build_part_buildout() == {
-                'buildout': OrderedDict([
-                        ('newest', 'false'),
-                        ('parts', ''),
-                        ('develop', '.'),
-                        ('eggs-directory',         '${buildout:directory}/var/eggs'),
-                        ('develop-eggs-directory', '${buildout:directory}/var/develop-eggs'),
-                        ('parts-directory',        '${buildout:directory}/var/parts'),
-                        ('bin-directory',          '${buildout:directory}/bin')
+                'buildout': OrderedDict([('newest', 'false'),
+                    ('parts', ''),
+                    ('package', ''),
+                    ('extensions', 'gp.vcsdevelop'),
+                    ('develop', '.'),
+                    ('eggs-directory', '${buildout:directory}/var/eggs'),
+                    ('develop-eggs-directory', '${buildout:directory}/var/develop-eggs'),
+                    ('parts-directory', '${buildout:directory}/var/parts'),
+                    ('develop-dir', '${buildout:directory}/var/develop'),
+                    ('bin-directory', '${buildout:directory}/bin'),
+                    ('requirements', [])
                     ])
                 }
 
@@ -304,203 +305,91 @@ class TestFun__build_part_buildout:
         assert buildout_part['buildout']['bin-directory']          == '/fubar'
 
 class TestFun_build_parts:
-    def get_buildout_part(self, *parts):
+    def get_buildout_part(self, packages, parts=[], requirements=[]):
         return OrderedDict([
-                ('newest', 'false'),
-                ('parts', list(parts)),
-                ('directory', '.'),
-                ('develop', '.'),
-                ('eggs-directory', '${buildout:directory}/var/eggs'),
-                ('develop-eggs-directory', '${buildout:directory}/var/develop-eggs'),
-                ('parts-directory', '${buildout:directory}/var/parts'),
-                ('bin-directory', '${buildout:directory}/bin')
+            ('newest', 'false'),
+            ('parts', parts),
+            ('package', packages),
+            ('extensions', 'gp.vcsdevelop'),
+            ('directory', '.'),
+            ('develop', '.'),
+            ('eggs-directory', '${buildout:directory}/var/eggs'),
+            ('develop-eggs-directory', '${buildout:directory}/var/develop-eggs'),
+            ('parts-directory', '${buildout:directory}/var/parts'),
+            ('develop-dir', '${buildout:directory}/var/develop'),
+            ('bin-directory', '${buildout:directory}/bin'),
+            ('requirements', [os.path.join('${buildout:develop}', r) for r in requirements]),
             ])
 
     def test_build_parts__packages_uniq__req_uniq(self):
         parts = build_parts(packages='a', requirements='b')
         pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a')
+        assert parts['buildout'] == self.get_buildout_part('a', parts=['a'], requirements=['b'])
         assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == ['${buildout:develop}/b']
+        assert parts['a']['eggs'] == ['${buildout:requirements-eggs}', 'a']
 
     def test_build_parts__packages_uniq__req_list(self):
         parts = build_parts(packages='a', requirements=['b', 'c', 'd'])
         pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a')
+        assert parts['buildout'] == self.get_buildout_part('a', ['a'], ['b', 'c', 'd'])
         assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == [
-                    '${buildout:develop}/b',
-                    '${buildout:develop}/c',
-                    '${buildout:develop}/d'
-                ]
+        assert parts['a']['eggs'] == ['${buildout:requirements-eggs}', 'a']
 
     def test_build_parts__packages_uniq__req_lstr(self):
         parts = build_parts(packages='a', requirements='b,c,d')
         pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a')
+        assert parts['buildout'] == self.get_buildout_part('a', ['a'], ['b', 'c', 'd'])
         assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == [
-                    '${buildout:develop}/b',
-                    '${buildout:develop}/c',
-                    '${buildout:develop}/d'
-                ]
+        assert parts['a']['eggs'] == ['${buildout:requirements-eggs}', 'a']
 
     def test_build_parts__packages_list__req_uniq(self):
         parts = build_parts(packages=['a', 'x'], requirements='b')
         pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a')
+        assert parts['buildout'] == self.get_buildout_part('a x', ['a'], ['b'])
         assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a', 'x']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == ['${buildout:develop}/b']
+        assert parts['a']['eggs'] == ['${buildout:requirements-eggs}', 'a', 'x']
 
     def test_build_parts__packages_list__req_list(self):
         parts = build_parts(packages=['a', 'x'], requirements=['b', 'c', 'd'])
         pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a')
+        assert parts['buildout'] == self.get_buildout_part('a x', ['a'], ['b', 'c', 'd'])
         assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a', 'x']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == [
-                    '${buildout:develop}/b',
-                    '${buildout:develop}/c',
-                    '${buildout:develop}/d'
-                ]
+        assert parts['a']['eggs'] == ['${buildout:requirements-eggs}', 'a', 'x']
 
     def test_build_parts__packages_list__req_lstr(self):
         parts = build_parts(packages=['a', 'x'], requirements='b,c,d')
         pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a')
+        assert parts['buildout'] == self.get_buildout_part('a x', ['a'], ['b', 'c', 'd'])
         assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a', 'x']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == [
-                    '${buildout:develop}/b',
-                    '${buildout:develop}/c',
-                    '${buildout:develop}/d'
-                ]
+        assert parts['a']['eggs'] == ['${buildout:requirements-eggs}', 'a', 'x']
 
     def test_build_parts__packages_list__req_lstr(self):
         parts = build_parts(packages=['a', 'x'], requirements='b,c,d')
         pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a')
+        assert parts['buildout'] == self.get_buildout_part('a x', ['a'], ['b', 'c', 'd'])
         assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a', 'x']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == [
-                    '${buildout:develop}/b',
-                    '${buildout:develop}/c',
-                    '${buildout:develop}/d'
-                ]
+        assert parts['a']['eggs'] == ['${buildout:requirements-eggs}', 'a', 'x']
 
     def test_build_parts__packages_lstr__req_uniq(self):
         parts = build_parts(packages='a,x', requirements='b')
         pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a')
+        assert parts['buildout'] == self.get_buildout_part('a x', ['a'], ['b'])
         assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a', 'x']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == ['${buildout:develop}/b']
+        assert parts['a']['eggs'] == ['${buildout:requirements-eggs}', 'a', 'x']
 
     def test_build_parts__packages_lstr__req_list(self):
         parts = build_parts(packages='a,x', requirements=['b', 'c', 'd'])
         pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a')
+        assert parts['buildout'] == self.get_buildout_part('a x', ['a'], ['b', 'c', 'd'])
         assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a', 'x']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == [
-                    '${buildout:develop}/b',
-                    '${buildout:develop}/c',
-                    '${buildout:develop}/d'
-                ]
+        assert parts['a']['eggs'] == ['${buildout:requirements-eggs}', 'a', 'x']
 
     def test_build_parts__packages_lstr__req_lstr(self):
         parts = build_parts(packages='a,x', requirements='b,c,d')
         pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a')
+        assert parts['buildout'] == self.get_buildout_part('a x', ['a'], ['b', 'c', 'd'])
         assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a', 'x']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == [
-                    '${buildout:develop}/b',
-                    '${buildout:develop}/c',
-                    '${buildout:develop}/d'
-                ]
-
-    def test_build_parts__packages_uniq__req_uniq__extra_single(self):
-        parts = build_parts(packages='a', requirements='b', extra_requirements=['c=d'])
-        pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a', 'c')
-        assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == ['${buildout:develop}/b']
-        assert parts['c']['recipe'] == 'zc.recipe.egg'
-        assert parts['c']['eggs'] == ['${c-pip:eggs}']
-        assert parts['c-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['c-pip']['configs'] == ['${buildout:develop}/d']
-
-    def test_build_parts__packages_uniq__req_uniq__extra_multi(self):
-        parts = build_parts(packages='a', requirements='b', extra_requirements=['c=d', 'e=f'])
-        pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a', 'c', 'e')
-        assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == ['${buildout:develop}/b']
-        assert parts['c']['recipe'] == 'zc.recipe.egg'
-        assert parts['c']['eggs'] == ['${c-pip:eggs}']
-        assert parts['c-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['c-pip']['configs'] == ['${buildout:develop}/d']
-        assert parts['e']['recipe'] == 'zc.recipe.egg'
-        assert parts['e']['eggs'] == ['${e-pip:eggs}']
-        assert parts['e-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['e-pip']['configs'] == ['${buildout:develop}/f']
-
-    def test_build_parts__packages_uniq__req_uniq__extra_single__multi_config(self):
-        parts = build_parts(packages='a', requirements='b', extra_requirements=['c=d,e,f'])
-        pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a', 'c')
-        assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == ['${buildout:develop}/b']
-        assert parts['c']['recipe'] == 'zc.recipe.egg'
-        assert parts['c']['eggs'] == ['${c-pip:eggs}']
-        assert parts['c-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['c-pip']['configs'] == [
-                    '${buildout:develop}/d',
-                    '${buildout:develop}/e',
-                    '${buildout:develop}/f'
-                ]
-
-    def test_build_parts__packages_uniq__req_uniq__extra_multi__multi_config(self):
-        parts = build_parts(packages='a', requirements='b', extra_requirements=['c=d,e,f', 'g=h'])
-        pprint(parts)
-        assert parts['buildout'] == self.get_buildout_part('a', 'c', 'g')
-        assert parts['a']['recipe'] == 'zc.recipe.egg'
-        assert parts['a']['eggs'] == ['${a-pip:eggs}', 'a']
-        assert parts['a-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['a-pip']['configs'] == ['${buildout:develop}/b']
-        assert parts['c']['recipe'] == 'zc.recipe.egg'
-        assert parts['c']['eggs'] == ['${c-pip:eggs}']
-        assert parts['c-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['c-pip']['configs'] == [
-                    '${buildout:develop}/d',
-                    '${buildout:develop}/e',
-                    '${buildout:develop}/f'
-                ]
-        assert parts['g']['recipe'] == 'zc.recipe.egg'
-        assert parts['g']['eggs'] == ['${g-pip:eggs}']
-        assert parts['g-pip']['recipe'] == 'collective.recipe.pip'
-        assert parts['g-pip']['configs'] == ['${buildout:develop}/h']
+        assert parts['a']['eggs'] == ['${buildout:requirements-eggs}', 'a', 'x']
 
 from contextlib import contextmanager
 
@@ -513,89 +402,98 @@ class UnitConfig:
 unit_config_list = {
         'config_show_buildstrap': UnitConfig(
         args={'--bin': 'bin',
-                '--env': 'var',
-                '--force': True,
-                '--help': False,
-                '--interpreter': 'python3',
-                '--output': 'irrelevant',
-                '--root': None,
-                '--src': None,
-                '--verbose': 0,
-                '--version': False,
-                '<package>': 'buildstrap',
-                '<requirements>': 'requirements.txt',
-                '<target>=<requirements>': ListBuildout(['doc=requirements-doc.txt', 'test=requirements-test.txt']),
-                'debug': False,
-                'generate': False,
-                'run': False,
-                'show': True},
+              '--config': '~/.config/buildstrap',
+              '--env': 'var',
+              '--force': True,
+              '--help': False,
+              '--interpreter': 'python3',
+              '--output': 'irrelevant',
+              '--part': ['pytest', 'sphinx'],
+              '--root': None,
+              '--src': None,
+              '--verbose': 0,
+              '--version': False,
+              '<package>': 'buildstrap',
+              '<requirements>': ['requirements.txt', 'requirements-doc.txt', 'requirements-test.txt'],
+              'debug': False,
+              'generate': False,
+              'run': False,
+              'show': True},
         internal=OrderedDict([('buildout',
-                OrderedDict([('newest', 'false'), ('parts', ListBuildout(['buildstrap', 'doc', 'test'])),
+                OrderedDict([('newest', 'false'), 
+                            ('parts', ListBuildout(['buildstrap', 'pytest', 'sphinx'])),
+                            ('package', 'buildstrap'),
+                            ('extensions', 'gp.vcsdevelop'),
                             ('develop', '.'),
                             ('eggs-directory', '${buildout:directory}/var/eggs'),
                             ('develop-eggs-directory', '${buildout:directory}/var/develop-eggs'),
                             ('parts-directory', '${buildout:directory}/var/parts'),
-                            ('bin-directory', '${buildout:directory}/bin')])),
+                            ('develop-dir', '${buildout:directory}/var/develop'),
+                            ('bin-directory', '${buildout:directory}/bin'),
+                            ('requirements', ListBuildout(['${buildout:develop}/requirements.txt', 
+                                '${buildout:develop}/requirements-doc.txt', '${buildout:develop}/requirements-test.txt'])),
+                            ])),
                 ('buildstrap',
                 OrderedDict([('recipe', 'zc.recipe.egg'),
-                            ('eggs', ListBuildout(['${buildstrap-pip:eggs}', 'buildstrap'])),
+                            ('eggs', ListBuildout(['${buildout:requirements-eggs}', 'buildstrap'])),
                             ('interpreter', 'python3')])),
-                ('doc',
+                ('pytest',
                 OrderedDict([('recipe', 'zc.recipe.egg'),
-                            ('eggs', ListBuildout(['${doc-pip:eggs}'])),
+                            ('eggs', ListBuildout(['${buildout:requirements-eggs}'])),
                             ('interpreter', 'python3')])),
-                ('test',
-                OrderedDict([('recipe', 'zc.recipe.egg'),
-                            ('eggs', ListBuildout(['${test-pip:eggs}'])),
-                            ('interpreter', 'python3')])),
-                ('buildstrap-pip',
-                OrderedDict([('recipe', 'collective.recipe.pip'),
-                            ('configs', ListBuildout(['${buildout:develop}/requirements.txt']))])),
-                ('doc-pip',
-                OrderedDict([('recipe', 'collective.recipe.pip'),
-                            ('configs', ListBuildout(['${buildout:develop}/requirements-doc.txt']))])),
-                ('test-pip',
-                OrderedDict([('recipe', 'collective.recipe.pip'),
-                            ('configs', ListBuildout(['${buildout:develop}/requirements-test.txt']))]))]),
+                ('pytest',
+                 OrderedDict([
+                              ('arguments', "['--cov={}/{}'.format('${buildout:develop}', "
+                                            'package) for package in '
+                                            "'${buildout:package}'.split(',')] \\\n"
+                                            "+['--cov-report', 'term-missing', "
+                                            "'tests']+sys.argv[1:]"),
+                              ('eggs', ListBuildout(['${buildout:requirements-eggs}'])),
+                              ('recipe', 'zc.recipe.egg'),
+                              ])),
+                ('sphinx',
+                OrderedDict([
+                            ('build', '${buildout:directory}/doc/_build'),
+                            ('eggs', ListBuildout(['${buildout:requirements-eggs}'])),
+                            ('recipe', 'collective.recipe.sphinxbuilder'),
+                            ('source', '${buildout:directory}/doc'),
+                            ])),
+                ]),
         output="\n".join([
                 '[buildout]',
                 'newest = false',
                 'parts = buildstrap',
-                '	doc',
-                '	test',
+                '	pytest',
+                '	sphinx',
+                'package = buildstrap',
+                'extensions = gp.vcsdevelop',
                 'develop = .',
                 'eggs-directory = ${buildout:directory}/var/eggs',
                 'develop-eggs-directory = ${buildout:directory}/var/develop-eggs',
                 'parts-directory = ${buildout:directory}/var/parts',
+                'develop-dir = ${buildout:directory}/var/develop',
                 'bin-directory = ${buildout:directory}/bin',
+                'requirements = ${buildout:develop}/requirements.txt',
+                '	${buildout:develop}/requirements-doc.txt',
+                '	${buildout:develop}/requirements-test.txt',
                 '',
                 '[buildstrap]',
                 'recipe = zc.recipe.egg',
-                'eggs = ${buildstrap-pip:eggs}',
+                'eggs = ${buildout:requirements-eggs}',
                 '	buildstrap',
                 'interpreter = python3',
                 '',
-                '[doc]',
+                '[pytest]',
+                "arguments = ['--cov={}/{}'.format('${buildout:develop}', package) for package in '${buildout:package}'.split(',')] \\",
+                "	+['--cov-report', 'term-missing', 'tests']+sys.argv[1:]",
+                'eggs = ${buildout:requirements-eggs}',
                 'recipe = zc.recipe.egg',
-                'eggs = ${doc-pip:eggs}',
-                'interpreter = python3',
                 '',
-                '[test]',
-                'recipe = zc.recipe.egg',
-                'eggs = ${test-pip:eggs}',
-                'interpreter = python3',
-                '',
-                '[buildstrap-pip]',
-                'recipe = collective.recipe.pip',
-                'configs = ${buildout:develop}/requirements.txt',
-                '',
-                '[doc-pip]',
-                'recipe = collective.recipe.pip',
-                'configs = ${buildout:develop}/requirements-doc.txt',
-                '',
-                '[test-pip]',
-                'recipe = collective.recipe.pip',
-                'configs = ${buildout:develop}/requirements-test.txt',
+                '[sphinx]',
+                'build = ${buildout:directory}/doc/_build',
+                'eggs = ${buildout:requirements-eggs}',
+                'recipe = collective.recipe.sphinxbuilder',
+                'source = ${buildout:directory}/doc',
                 '',
                 '',
             ])
@@ -603,18 +501,19 @@ unit_config_list = {
 
     'config_show_min': UnitConfig(
         args={'--bin': 'bin',
+              '--config': '~/.config/buildstrap',
               '--env': 'var',
               '--force': True,
               '--help': False,
               '--interpreter': None,
               '--output': 'irrelevant',
+              '--part': [],
               '--root': None,
               '--src': None,
               '--verbose': 0,
               '--version': False,
               '<package>': 'buildstrap',
-              '<requirements>': 'requirements.txt',
-              '<target>=<requirements>': [],
+              '<requirements>': ['requirements.txt'],
               'debug': False,
               'generate': False,
               'run': False,
@@ -623,36 +522,38 @@ unit_config_list = {
                 ('buildout',
                 OrderedDict([('newest', 'false'),
                             ('parts', ListBuildout(['buildstrap'])),
+                            ('package', 'buildstrap'),
+                            ('extensions', 'gp.vcsdevelop'),
                             ('develop', '.'),
                             ('eggs-directory', '${buildout:directory}/var/eggs'),
                             ('develop-eggs-directory', '${buildout:directory}/var/develop-eggs'),
                             ('parts-directory', '${buildout:directory}/var/parts'),
-                            ('bin-directory', '${buildout:directory}/bin')])),
+                            ('develop-dir', '${buildout:directory}/var/develop'),
+                            ('bin-directory', '${buildout:directory}/bin'),
+                            ('requirements', '${buildout:develop}/requirements.txt'),
+                            ])),
                 ('buildstrap',
                 OrderedDict([('recipe', 'zc.recipe.egg'),
                             ('eggs',
-                                ListBuildout(['${buildstrap-pip:eggs}', 'buildstrap']))])),
-                ('buildstrap-pip',
-                OrderedDict([('recipe', 'collective.recipe.pip'),
-                            ('configs',
-                                ListBuildout(['${buildout:develop}/requirements.txt']))]))]),
+                                ListBuildout(['${buildout:requirements-eggs}', 'buildstrap']))])),
+                            ]),
         output='\n'.join(['[buildout]',
                           'newest = false',
                           'parts = buildstrap',
+                          'package = buildstrap',
+                          'extensions = gp.vcsdevelop',
                           'develop = .',
                           'eggs-directory = ${buildout:directory}/var/eggs',
                           'develop-eggs-directory = ${buildout:directory}/var/develop-eggs',
                           'parts-directory = ${buildout:directory}/var/parts',
+                          'develop-dir = ${buildout:directory}/var/develop',
                           'bin-directory = ${buildout:directory}/bin',
+                          'requirements = ${buildout:develop}/requirements.txt',
                           '',
                           '[buildstrap]',
                           'recipe = zc.recipe.egg',
-                          'eggs = ${buildstrap-pip:eggs}',
+                          'eggs = ${buildout:requirements-eggs}',
                           '	buildstrap',
-                          '',
-                          '[buildstrap-pip]',
-                          'recipe = collective.recipe.pip',
-                          'configs = ${buildout:develop}/requirements.txt',
                           '',
                           '',
                     ])
@@ -660,18 +561,19 @@ unit_config_list = {
 
     'config_show_min_path': UnitConfig(
         args={'--bin': '/bin',
+              '--config': '~/.config/buildstrap',
               '--env': '/env',
               '--force': True,
               '--help': False,
               '--interpreter': None,
               '--output': 'irrelevant',
+              '--part': [],
               '--root': '/root',
               '--src': '/src',
               '--verbose': 0,
               '--version': False,
               '<package>': 'buildstrap',
-              '<requirements>': 'requirements.txt',
-              '<target>=<requirements>': [],
+              '<requirements>': ['requirements.txt'],
               'debug': False,
               'generate': False,
               'run': False,
@@ -680,56 +582,59 @@ unit_config_list = {
              ('buildout',
               OrderedDict([('newest', 'false'),
                            ('parts', ListBuildout(['buildstrap'])),
+                           ('package', 'buildstrap'),
+                           ('extensions', 'gp.vcsdevelop'),
                            ('directory', '/root'),
                            ('develop', '/src'),
                            ('eggs-directory', '/env/eggs'),
                            ('develop-eggs-directory', '/env/develop-eggs'),
                            ('parts-directory', '/env/parts'),
-                           ('bin-directory', '/bin')])),
+                           ('develop-dir', '/env/develop'),
+                           ('bin-directory', '/bin'),
+                           ('requirements', '${buildout:develop}/requirements.txt'),
+                           ])),
              ('buildstrap',
               OrderedDict([('recipe', 'zc.recipe.egg'),
                            ('eggs',
-                            ListBuildout(['${buildstrap-pip:eggs}', 'buildstrap']))])),
-             ('buildstrap-pip',
-              OrderedDict([('recipe', 'collective.recipe.pip'),
-                           ('configs',
-                            ListBuildout(['${buildout:develop}/requirements.txt']))]))]),
+                            ListBuildout(['${buildout:requirements-eggs}', 'buildstrap']))])),
+                           ]),
         output='\n'.join(['[buildout]',
                           'newest = false',
                           'parts = buildstrap',
+                          'package = buildstrap',
+                          'extensions = gp.vcsdevelop',
                           'directory = /root',
                           'develop = /src',
                           'eggs-directory = /env/eggs',
                           'develop-eggs-directory = /env/develop-eggs',
                           'parts-directory = /env/parts',
+                          'develop-dir = /env/develop',
                           'bin-directory = /bin',
+                          'requirements = ${buildout:develop}/requirements.txt',
                           '',
                           '[buildstrap]',
                           'recipe = zc.recipe.egg',
-                          'eggs = ${buildstrap-pip:eggs}',
+                          'eggs = ${buildout:requirements-eggs}',
                           '	buildstrap',
-                          '',
-                          '[buildstrap-pip]',
-                          'recipe = collective.recipe.pip',
-                          'configs = ${buildout:develop}/requirements.txt',
                           '',
                           ''])
     ),
 
     'config_debug_min': UnitConfig(
         args={'--bin': 'bin',
+              '--config': '~/.config/buildstrap',
               '--env': 'var',
               '--force': True,
               '--help': False,
               '--interpreter': None,
               '--output': 'irrelevant',
+              '--part': [],
               '--root': None,
               '--src': None,
               '--verbose': 0,
               '--version': False,
               '<package>': 'buildstrap',
-              '<requirements>': 'requirements.txt',
-              '<target>=<requirements>': [],
+              '<requirements>': ['requirements.txt'],
               'debug': True,
               'generate': False,
               'run': False,
@@ -738,36 +643,37 @@ unit_config_list = {
                 ('buildout',
                 OrderedDict([('newest', 'false'),
                             ('parts', ListBuildout(['buildstrap'])),
+                            ('package', 'buildstrap'),
+                            ('extensions', 'gp.vcsdevelop'),
                             ('develop', '.'),
                             ('eggs-directory', '${buildout:directory}/var/eggs'),
                             ('develop-eggs-directory', '${buildout:directory}/var/develop-eggs'),
                             ('parts-directory', '${buildout:directory}/var/parts'),
-                            ('bin-directory', '${buildout:directory}/bin')])),
+                            ('develop-dir', '${buildout:directory}/var/develop'),
+                            ('bin-directory', '${buildout:directory}/bin'),
+                            ('requirements', ListBuildout(['${buildout:develop}/requirements.txt']))])),
                 ('buildstrap',
                 OrderedDict([('recipe', 'zc.recipe.egg'),
                             ('eggs',
-                                ListBuildout(['${buildstrap-pip:eggs}', 'buildstrap']))])),
-                ('buildstrap-pip',
-                OrderedDict([('recipe', 'collective.recipe.pip'),
-                            ('configs',
-                                ListBuildout(['${buildout:develop}/requirements.txt']))]))]),
+                                ListBuildout(['${buildout:requirements-eggs}', 'buildstrap']))])),
+                            ]),
         output='\n'.join(['[buildout]',
                           'newest = false',
                           'parts = buildstrap',
+                          'package = buildstrap',
+                          'extensions = gp.vcsdevelop',
                           'develop = .',
                           'eggs-directory = ${buildout:directory}/var/eggs',
                           'develop-eggs-directory = ${buildout:directory}/var/develop-eggs',
                           'parts-directory = ${buildout:directory}/var/parts',
+                          'develop-dir = ${buildout:directory}/var/develop',
                           'bin-directory = ${buildout:directory}/bin',
+                          'requirements = ${buildout:develop}/requirements.txt',
                           '',
                           '[buildstrap]',
                           'recipe = zc.recipe.egg',
-                          'eggs = ${buildstrap-pip:eggs}',
+                          'eggs = ${buildout:requirements-eggs}',
                           '	buildstrap',
-                          '',
-                          '[buildstrap-pip]',
-                          'recipe = collective.recipe.pip',
-                          'configs = ${buildout:develop}/requirements.txt',
                           '',
                           '',
                           ])
@@ -775,18 +681,19 @@ unit_config_list = {
 
     'config_run_min': UnitConfig(
         args={'--bin': 'bin',
+              '--config': '~/.config/buildstrap',
               '--env': 'var',
               '--force': True,
               '--help': False,
               '--interpreter': None,
               '--output': 'test_file',
+              '--part': [],
               '--root': None,
               '--src': None,
               '--verbose': 0,
               '--version': False,
               '<package>': 'buildstrap',
-              '<requirements>': 'requirements.txt',
-              '<target>=<requirements>': [],
+              '<requirements>': ['requirements.txt'],
               'debug': False,
               'generate': False,
               'run': True,
@@ -795,36 +702,37 @@ unit_config_list = {
                 ('buildout',
                 OrderedDict([('newest', 'false'),
                             ('parts', ListBuildout(['buildstrap'])),
+                            ('package', 'buildstrap'),
+                            ('extensions', 'gp.vcsdevelop'),
                             ('develop', '.'),
                             ('eggs-directory', '${buildout:directory}/var/eggs'),
                             ('develop-eggs-directory', '${buildout:directory}/var/develop-eggs'),
                             ('parts-directory', '${buildout:directory}/var/parts'),
-                            ('bin-directory', '${buildout:directory}/bin')])),
+                            ('develop-dir', '${buildout:directory}/var/develop'),
+                            ('bin-directory', '${buildout:directory}/bin'),
+                            ('requirements', '${buildout:develop}/requirements.txt')])),
                 ('buildstrap',
                 OrderedDict([('recipe', 'zc.recipe.egg'),
                             ('eggs',
-                                ListBuildout(['${buildstrap-pip:eggs}', 'buildstrap']))])),
-                ('buildstrap-pip',
-                OrderedDict([('recipe', 'collective.recipe.pip'),
-                            ('configs',
-                                ListBuildout(['${buildout:develop}/requirements.txt']))]))]),
+                                ListBuildout(['${buildout:requirements-eggs}', 'buildstrap']))])),
+                            ]),
         output='\n'.join(['[buildout]',
                           'newest = false',
                           'parts = buildstrap',
+                          'package = buildstrap',
+                          'extensions = gp.vcsdevelop',
                           'develop = .',
                           'eggs-directory = ${buildout:directory}/var/eggs',
                           'develop-eggs-directory = ${buildout:directory}/var/develop-eggs',
                           'parts-directory = ${buildout:directory}/var/parts',
+                          'develop-dir = ${buildout:directory}/var/develop',
                           'bin-directory = ${buildout:directory}/bin',
+                          'requirements = ${buildout:develop}/requirements.txt',
                           '',
                           '[buildstrap]',
                           'recipe = zc.recipe.egg',
-                          'eggs = ${buildstrap-pip:eggs}',
+                          'eggs = ${buildout:requirements-eggs}',
                           '	buildstrap',
-                          '',
-                          '[buildstrap-pip]',
-                          'recipe = collective.recipe.pip',
-                          'configs = ${buildout:develop}/requirements.txt',
                           '',
                           '',
                           ])
@@ -951,6 +859,7 @@ class TestFun_test_buildstrap(MockupsMixin):
                             assert out == fake_out.getvalue()
                         elif config.args['run']:
                             assert buildout_mock.ran == True
+                            assert buf.getvalue() == config.output
                         else:
                             assert buf.getvalue() == config.output
 
