@@ -28,7 +28,7 @@ to make it easy to create a buildout environment within the project.
 Here we'll see the most common usages, and refer to [the full documentation for
 more details][doc].
 
-[doc]:https://buildstrap.readthedocs.org/
+[doc]:https://buildstrap.readthedocs.io/
 
 ## Usage
 
@@ -116,7 +116,7 @@ Yeah, I'm being evil here 😈
 
 You can have a look at the [sources documentation][srcdoc].
 
-[srcdoc]:http://buildstrap.readthedocs.io/en/latest/buildstrap.html
+[srcdoc]:https://buildstrap.readthedocs.io/en/latest/buildstrap.html
 
 ## Nota Bene
 
